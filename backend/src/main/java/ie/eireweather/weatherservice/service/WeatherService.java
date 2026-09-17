@@ -41,6 +41,10 @@ public class WeatherService {
 
     @Cacheable(value = "forecasts", key = "#lat + '-' + #lon")
     public WeatherResponse getForecast(double lat, double lon) {
+        if (lat < -90.0 || lat > 90.0 || lon < -180.0 || lon > 180.0) {
+            throw new IllegalArgumentException("Latitude must be between -90 and 90, and longitude between -180 and 180.");
+        }
+        
         String rawUrl = String.format(Locale.US, MET_EIREANN_API_URL, lat, lon);
 
         MetEireannResponseDto raw = restClient.get()
