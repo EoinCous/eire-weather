@@ -4,6 +4,8 @@ import {
   CloudFog, Wind, Droplet, Gauge, MapPin, 
   CloudLightning, Loader2, AlertCircle 
 } from 'lucide-react';
+import WeatherChart from './WeatherChart';
+import DailyForecast from './DailyForecast';
 
 // Helper to map Met Éireann symbol codes to Lucide React SVG components
 const WeatherIcon = ({ symbol, className = "w-8 h-8", strokeWidth = 2 }) => {
@@ -146,6 +148,12 @@ export default function WeatherDashboard() {
               </div>
             </div>
           </section>
+        )}
+
+        {hourlyForecasts && <WeatherChart hourlyData={hourlyForecasts} />}
+
+        {hourlyForecasts && (
+          <DailyForecast hourlyForecasts={hourlyForecasts} WeatherIcon={WeatherIcon} />
         )}
 
         {/* Hourly Carousel */}
