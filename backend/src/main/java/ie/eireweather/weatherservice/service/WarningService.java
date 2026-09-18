@@ -6,6 +6,7 @@ import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
+import org.springframework.web.client.HttpClientErrorException;
 import org.springframework.web.client.RestClient;
 
 import java.util.Collections;
@@ -16,8 +17,7 @@ public class WarningService {
 
     private final RestClient restClient;
     private static final String NATIONAL_WARNINGS_URL = "https://www.met.ie/Open_Data/json/warning_IRELAND.json";
-    
-    // In-memory cache for active warnings
+
     private List<MetEireannWarningDto> cachedWarnings = Collections.emptyList();
 
     public WarningService() {
@@ -27,7 +27,6 @@ public class WarningService {
             .build();
     }
 
-    // Refresh every 10 minutes (600,000 ms)
     @Scheduled(fixedRate = 600000)
     public void fetchWarnings() {
         try {
@@ -36,11 +35,12 @@ public class WarningService {
                 .retrieve()
                 .body(new ParameterizedTypeReference<List<MetEireannWarningDto>>() {});
 
-            if (warnings != null) {
-                this.cachedWarnings = warnings;
-            }
+            this.cachedWarnings = (warnings != null) ? warnings : Collections.emptyList();
+        } catch (HttpClientErrorException.NotFound e) {
+            // Met Éireann returns 404 when no national warnings are active
+            this.cachedWarnings = Collections.emptyList();
         } catch (Exception e) {
-            // Keep last good copy in cache if request fails
+            // Retain last known good cache on actual network or 5xx errors
             System.err.println("Failed to update Met Éireann warnings: " + e.getMessage());
         }
     }
