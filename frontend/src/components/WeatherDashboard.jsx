@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { 
   Sun, CloudSun, Cloud, CloudRain, CloudSnow, 
   CloudFog, Wind, Droplet, Gauge, MapPin, 
-  CloudLightning, Loader2, AlertCircle 
+  CloudLightning, Loader2, AlertCircle, AlertTriangle, ShieldAlert 
 } from 'lucide-react';
 import WeatherChart from './WeatherChart';
 import DailyForecast from './DailyForecast';
@@ -23,27 +23,68 @@ const WeatherIcon = ({ symbol, className = "w-8 h-8", strokeWidth = 2 }) => {
   return <CloudSun className={className} strokeWidth={strokeWidth} />;
 };
 
+// Helper for Warning Level visual styling (Yellow / Orange / Red)
+const getWarningLevelStyles = (level) => {
+  const l = (level || '').toLowerCase();
+  if (l.includes('red')) {
+    return {
+      bg: 'bg-red-950/60 border-red-500/80 shadow-red-950/50',
+      badge: 'bg-red-600 text-white font-bold',
+      text: 'text-red-100',
+      subText: 'text-red-300/80',
+      icon: <ShieldAlert className="w-6 h-6 text-red-400 flex-shrink-0 animate-pulse" />
+    };
+  }
+  if (l.includes('orange')) {
+    return {
+      bg: 'bg-orange-950/50 border-orange-500/70 shadow-orange-950/50',
+      badge: 'bg-orange-500 text-slate-950 font-bold',
+      text: 'text-orange-100',
+      subText: 'text-orange-300/80',
+      icon: <AlertTriangle className="w-6 h-6 text-orange-400 flex-shrink-0" />
+    };
+  }
+  // Yellow default
+  return {
+    bg: 'bg-amber-950/40 border-amber-500/60 shadow-amber-950/30',
+    badge: 'bg-amber-400 text-slate-950 font-bold',
+    text: 'text-amber-100',
+    subText: 'text-amber-300/80',
+    icon: <AlertCircle className="w-6 h-6 text-amber-400 flex-shrink-0" />
+  };
+};
+
 export default function WeatherDashboard() {
   const [weather, setWeather] = useState(null);
+  const [warnings, setWarnings] = useState([]);
   const [locationName, setLocationName] = useState('Locating...');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
-  // Default coords
+  // Default coords (Longford)
   const [lat, setLat] = useState(53.727);
   const [lon, setLon] = useState(-7.793);
 
   useEffect(() => {
     setLoading(true);
     
-    // Fetch Weather Data
-    fetch(`http://localhost:8080/api/v1/weather/forecast?lat=${lat}&lon=${lon}`)
-      .then((res) => {
-        if (!res.ok) throw new Error('Failed to fetch weather data');
-        return res.json();
-      })
-      .then((data) => {
-        setWeather(data);
+    // Fetch Weather Forecast and Warnings concurrently
+    Promise.all([
+      fetch(`http://localhost:8080/api/v1/weather/forecast?lat=${lat}&lon=${lon}`)
+        .then((res) => {
+          if (!res.ok) throw new Error('Failed to fetch weather data');
+          return res.json();
+        }),
+      fetch(`http://localhost:8080/api/v1/weather/warnings`)
+        .then((res) => {
+          if (!res.ok) return []; // Fallback gracefully if warnings endpoint fails
+          return res.json();
+        })
+        .catch(() => [])
+    ])
+      .then(([weatherData, warningsData]) => {
+        setWeather(weatherData);
+        setWarnings(Array.isArray(warningsData) ? warningsData : []);
         setLoading(false);
       })
       .catch((err) => {
@@ -51,7 +92,7 @@ export default function WeatherDashboard() {
         setLoading(false);
       });
 
-    // Reverse Geocoding: Turn coordinates into a readable town/county name
+    // Reverse Geocoding
     fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lon}`)
       .then(res => res.json())
       .then(data => {
@@ -120,6 +161,56 @@ export default function WeatherDashboard() {
           </button>
         </header>
 
+        {/* Active Weather Warnings Banner */}
+        {warnings && warnings.length > 0 && (
+          <section className="space-y-3">
+            {warnings.map((warning, idx) => {
+              console.log(warning);
+              const styles = getWarningLevelStyles(warning.level);
+              return (
+                <div 
+                  key={warning.id || idx}
+                  className={`border rounded-2xl p-4 md:p-5 shadow-xl transition-all ${styles.bg}`}
+                >
+                  <div className="flex items-start gap-3 md:gap-4">
+                    {styles.icon}
+                    <div className="flex-1">
+                      <div className="flex items-center gap-2 flex-wrap mb-1">
+                        <span className={`px-2.5 py-0.5 rounded-md text-[11px] uppercase tracking-wider ${styles.badge}`}>
+                          Status {warning.level || 'Yellow'}
+                        </span>
+                        {warning.type && (
+                          <span className="text-xs font-semibold text-slate-300 uppercase tracking-wide">
+                            • {warning.type} Warning
+                          </span>
+                        )}
+                      </div>
+                      <h3 className={`font-bold text-base md:text-lg leading-snug mt-1 ${styles.text}`}>
+                        {warning.headline || warning.description}
+                      </h3>
+                      {warning.headline && warning.description && (
+                        <p className={`text-xs md:text-sm mt-1.5 leading-relaxed ${styles.subText}`}>
+                          {warning.description}
+                        </p>
+                      )}
+                      {(warning.onset || warning.expires) && (
+                        <div className="mt-3 flex items-center gap-4 text-[11px] text-slate-400 font-medium">
+                          {warning.onset && (
+                            <span>Valid from: {new Date(warning.onset).toLocaleString([], { dateStyle: 'short', timeStyle: 'short' })}</span>
+                          )}
+                          {warning.expires && (
+                            <span>Until: {new Date(warning.expires).toLocaleString([], { dateStyle: 'short', timeStyle: 'short' })}</span>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+          </section>
+        )}
+
         {/* Hero Card */}
         {current && (
           <section className="relative overflow-hidden bg-gradient-to-br from-blue-900/30 to-slate-900 border border-blue-500/20 rounded-3xl p-8 shadow-2xl">
@@ -135,6 +226,7 @@ export default function WeatherDashboard() {
                 <div className="flex items-start gap-1">
                   <span className="text-7xl md:text-8xl font-black text-white tracking-tighter">
                     {Math.round(current.temperatureC)}
+                    {console.log(weather)}
                   </span>
                   <span className="text-3xl md:text-4xl text-blue-400 font-bold mt-2">°C</span>
                 </div>

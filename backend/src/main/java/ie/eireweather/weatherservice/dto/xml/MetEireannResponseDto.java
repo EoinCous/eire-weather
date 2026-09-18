@@ -3,6 +3,7 @@ package ie.eireweather.weatherservice.dto.xml;
 import com.fasterxml.jackson.dataformat.xml.annotation.JacksonXmlElementWrapper;
 import com.fasterxml.jackson.dataformat.xml.annotation.JacksonXmlProperty;
 import com.fasterxml.jackson.dataformat.xml.annotation.JacksonXmlRootElement;
+
 import java.util.List;
 
 @JacksonXmlRootElement(localName = "weatherdata")
@@ -23,6 +24,8 @@ public record MetEireannResponseDto(
     public record Location(
             @JacksonXmlProperty(isAttribute = true) Double latitude,
             @JacksonXmlProperty(isAttribute = true) Double longitude,
+            @JacksonXmlProperty(localName = "cloudiness") Percentage cloudiness,
+            @JacksonXmlProperty(localName = "dewpointTemperature") ValueAttribute dewpointTemperature,
             @JacksonXmlProperty(localName = "temperature") ValueAttribute temperature,
             @JacksonXmlProperty(localName = "windDirection") WindDirection windDirection,
             @JacksonXmlProperty(localName = "windSpeed") WindSpeed windSpeed,
@@ -33,6 +36,7 @@ public record MetEireannResponseDto(
     ) {}
 
     public record ValueAttribute(@JacksonXmlProperty(isAttribute = true) Double value) {}
+    public record Percentage(@JacksonXmlProperty(isAttribute = true) Double percent) {}
     public record WindDirection(@JacksonXmlProperty(isAttribute = true) String name) {}
     public record WindSpeed(@JacksonXmlProperty(isAttribute = true) Double mps) {}
     public record Precipitation(@JacksonXmlProperty(isAttribute = true) Double value) {}

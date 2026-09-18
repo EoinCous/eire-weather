@@ -4,10 +4,11 @@ import java.time.Instant;
 
 public record HourlyForecast(
         Instant timestamp,
+        Double cloudiness,
+        Double dewpointTemperature,
         Double temperatureC,
         Double precipitationMm,
         String weatherSymbol,
-        Integer weatherSymbolNumber,
         Double windSpeedMps,
         String windDirection,
         Double humidityPercent,

@@ -73,6 +73,8 @@ public class WeatherService {
 
             if (entry.from().equals(entry.to())) {
                 // Point-in-time metrics
+                if (loc.cloudiness() != null) builder.cloudiness = loc.cloudiness().percent();
+                if (loc.dewpointTemperature() != null) builder.dewpointTemperature = loc.dewpointTemperature().value();
                 if (loc.temperature() != null) builder.temperature = loc.temperature().value();
                 if (loc.windSpeed() != null) builder.windSpeedMps = loc.windSpeed().mps();
                 if (loc.windDirection() != null) builder.windDirection = loc.windDirection().name();
@@ -81,10 +83,7 @@ public class WeatherService {
             } else {
                 // Interval metrics
                 if (loc.precipitation() != null) builder.precipitationMm = loc.precipitation().value();
-                if (loc.symbol() != null) {
-                    builder.weatherSymbol = loc.symbol().id();
-                    builder.weatherSymbolNumber = loc.symbol().number();
-                }
+                if (loc.symbol() != null) builder.weatherSymbol = loc.symbol().id();
             }
         }
 
@@ -100,10 +99,11 @@ public class WeatherService {
     // Mutable helper class during iteration
     private static class HourlyBuilder {
         private final Instant timestamp;
+        private Double cloudiness;
+        private Double dewpointTemperature;
         private Double temperature;
         private Double precipitationMm;
         private String weatherSymbol;
-        private Integer weatherSymbolNumber;
         private Double windSpeedMps;
         private String windDirection;
         private Double humidityPercent;
@@ -115,8 +115,8 @@ public class WeatherService {
 
         HourlyForecast build() {
             return new HourlyForecast(
-                    timestamp, temperature, precipitationMm, weatherSymbol,
-                    weatherSymbolNumber, windSpeedMps, windDirection, humidityPercent, pressureHpa
+                    timestamp, cloudiness, dewpointTemperature, temperature, precipitationMm, weatherSymbol,
+                    windSpeedMps, windDirection, humidityPercent, pressureHpa
             );
         }
     }
