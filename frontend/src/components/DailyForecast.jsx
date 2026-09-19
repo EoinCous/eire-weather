@@ -1,6 +1,8 @@
 import { Droplet } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 
 export default function DailyForecast({ hourlyForecasts, WeatherIcon }) {
+  const navigate = useNavigate();
   if (!hourlyForecasts || hourlyForecasts.length === 0) return null;
 
   // Group hourly entries into calendar days YYYY-MM-DD
@@ -12,6 +14,7 @@ export default function DailyForecast({ hourlyForecasts, WeatherIcon }) {
 
     if (!daysMap[dateKey]) {
       daysMap[dateKey] = {
+        dateKey, // Store the key for routing
         date,
         temps: [],
         rain: 0,
@@ -29,8 +32,9 @@ export default function DailyForecast({ hourlyForecasts, WeatherIcon }) {
     }
   });
 
-  // Transform grouped days into formatted array (up to 7 days)
-  const dailyList = Object.values(daysMap).slice(0, 7).map((day, idx) => ({
+  // Transform grouped days into formatted array (up to 10 days)
+  const dailyList = Object.values(daysMap).slice(0, 10).map((day, idx) => ({
+    dateKey: day.dateKey,
     dayName: idx === 0 ? 'Today' : day.date.toLocaleDateString('en-IE', { weekday: 'short' }),
     dateStr: day.date.toLocaleDateString('en-IE', { month: 'short', day: 'numeric' }),
     minTemp: Math.round(Math.min(...day.temps)),
@@ -39,31 +43,43 @@ export default function DailyForecast({ hourlyForecasts, WeatherIcon }) {
     symbol: day.middaySymbol || 'cloud',
   }));
 
-  // Calculate global min/max across the 7 days to scale range bars
   const globalMin = Math.min(...dailyList.map((d) => d.minTemp));
   const globalMax = Math.max(...dailyList.map((d) => d.maxTemp));
   const tempRange = globalMax - globalMin || 1;
 
+  const handleDayClick = (day) => {
+    // Filter the original hourly data for just this day
+    const dayHourlyData = hourlyForecasts.filter(h => h.timestamp.startsWith(day.dateKey));
+    
+    // Navigate to the detail page, passing the data in state
+    navigate(`/day/${day.dateKey}`, { 
+      state: { 
+        daySummary: day, 
+        hourlyData: dayHourlyData 
+      } 
+    });
+  };
+
   return (
     <section className="bg-slate-900/30 border border-slate-800/50 rounded-3xl p-6 shadow-xl">
       <h2 className="text-sm font-semibold text-slate-400 uppercase tracking-widest mb-4">
-        7-Day Forecast
+        10-Day Forecast
       </h2>
 
       <div className="divide-y divide-slate-800/60">
         {dailyList.map((day, idx) => {
-          // Calculate proportional width and position for temperature bar
           const leftPercent = ((day.minTemp - globalMin) / tempRange) * 100;
           const widthPercent = Math.max(((day.maxTemp - day.minTemp) / tempRange) * 100, 10);
 
           return (
             <div
               key={idx}
-              className="py-3.5 flex items-center justify-between gap-3 sm:gap-4 first:pt-0 last:pb-0 hover:bg-slate-800/30 px-2 rounded-xl transition-colors"
+              onClick={() => handleDayClick(day)}
+              className="py-3.5 flex items-center justify-between gap-3 sm:gap-4 first:pt-0 last:pb-0 hover:bg-slate-800/60 px-2 rounded-xl transition-colors cursor-pointer group"
             >
               {/* Day & Date */}
               <div className="w-20 sm:w-24 flex-shrink-0">
-                <p className="font-semibold text-slate-100 text-sm">{day.dayName}</p>
+                <p className="font-semibold text-slate-100 text-sm group-hover:text-blue-400 transition-colors">{day.dayName}</p>
                 <p className="text-[11px] text-slate-500 font-medium">{day.dateStr}</p>
               </div>
 
