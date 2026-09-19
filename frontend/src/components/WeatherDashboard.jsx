@@ -1,28 +1,11 @@
-import { useState, useEffect } from 'react';
 import { useWeather } from '../hooks/useWeather';
 import { 
-  Sun, CloudSun, Cloud, CloudRain, CloudSnow, 
-  CloudFog, Wind, Droplet, Gauge, MapPin, 
-  CloudLightning, Loader2, AlertCircle, AlertTriangle, ShieldAlert 
+  Droplet, MapPin, Loader2, AlertCircle, AlertTriangle, ShieldAlert 
 } from 'lucide-react';
 import WeatherChart from './WeatherChart';
 import DailyForecast from './DailyForecast';
-
-// Helper to map Met Éireann symbol codes to Lucide React SVG components
-const WeatherIcon = ({ symbol, className = "w-8 h-8", strokeWidth = 2 }) => {
-  if (!symbol) return <Cloud className={className} strokeWidth={strokeWidth} />;
-  const s = symbol.toLowerCase();
-  
-  if (s.includes('thunder')) return <CloudLightning className={className} strokeWidth={strokeWidth} />;
-  if (s.includes('snow') || s.includes('sleet')) return <CloudSnow className={className} strokeWidth={strokeWidth} />;
-  if (s.includes('rain') || s.includes('drizzle') || s.includes('shower')) return <CloudRain className={className} strokeWidth={strokeWidth} />;
-  if (s.includes('fog') || s.includes('mist')) return <CloudFog className={className} strokeWidth={strokeWidth} />;
-  if (s.includes('cloud') && s.includes('sun')) return <CloudSun className={className} strokeWidth={strokeWidth} />;
-  if (s.includes('sun') || s.includes('clear')) return <Sun className={className} strokeWidth={strokeWidth} />;
-  if (s.includes('cloud')) return <Cloud className={className} strokeWidth={strokeWidth} />;
-  
-  return <CloudSun className={className} strokeWidth={strokeWidth} />;
-};
+import CurrentConditions from './CurrentConditions';
+import { WeatherIcon } from './WeatherIcon';
 
 // Helper for Warning Level visual styling (Yellow / Orange / Red)
 const getWarningLevelStyles = (level) => {
@@ -192,35 +175,8 @@ export default function WeatherDashboard() {
           </section>
         )}
 
-        {/* Hero Card */}
-        {current && (
-          <section className="relative overflow-hidden bg-gradient-to-br from-blue-900/30 to-slate-900 border border-blue-500/20 rounded-3xl p-8 shadow-2xl">
-            <div className="absolute top-0 right-0 -mt-16 -mr-16 text-blue-500/10 blur-3xl">
-               <WeatherIcon symbol={current.weatherSymbol} className="w-96 h-96" />
-            </div>
-            
-            <div className="relative z-10 flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
-              <div>
-                <span className="inline-block px-3 py-1 text-[11px] font-bold uppercase tracking-widest text-blue-400 bg-blue-500/10 rounded-full border border-blue-500/20 mb-4">
-                  Current Conditions
-                </span>
-                <div className="flex items-start gap-1">
-                  <span className="text-7xl md:text-8xl font-black text-white tracking-tighter">
-                    {current.temperatureC}
-                  </span>
-                  <span className="text-3xl md:text-4xl text-blue-400 font-bold mt-2">°C</span>
-                </div>
-                <p className="text-slate-300 font-medium text-xl mt-2 capitalize flex items-center gap-2">
-                  {current.weatherSymbol || 'Clear'}
-                </p>
-              </div>
-
-              <div className="text-blue-400 drop-shadow-[0_0_15px_rgba(59,130,246,0.3)]">
-                <WeatherIcon symbol={current.weatherSymbol} className="w-32 h-32 md:w-40 md:h-40" strokeWidth={1.5} />
-              </div>
-            </div>
-          </section>
-        )}
+        {/* Current Conditions */}
+        <CurrentConditions current={current} />
 
         {hourlyForecasts && <WeatherChart hourlyData={hourlyForecasts} />}
 
@@ -259,72 +215,6 @@ export default function WeatherDashboard() {
             ))}
           </div>
         </section>
-
-        {/* Metrics Grid */}
-        {current && (
-          <section className="grid grid-cols-2 md:grid-cols-4 gap-4">
-            <MetricCard 
-              label="Wind Speed" 
-              value={`${current.windSpeedMps ?? 0} m/s`} 
-              subValue={current.windDirection} 
-              icon={<Wind className="w-5 h-5 text-blue-400" />} 
-            />
-            <MetricCard 
-              label="Humidity" 
-              value={`${current.humidityPercent ?? 0}%`} 
-              subValue="Relative" 
-              icon={<Droplet className="w-5 h-5 text-blue-400" />} 
-            />
-            <MetricCard 
-              label="Pressure" 
-              value={`${current.pressureHpa ?? 0} hPa`} 
-              subValue="Atmospheric" 
-              icon={<Gauge className="w-5 h-5 text-blue-400" />} 
-            />
-            <MetricCard 
-              label="Rainfall" 
-              value={`${current.precipitationMm ?? 0} mm`} 
-              subValue="Last Hour" 
-              icon={<CloudRain className="w-5 h-5 text-blue-400" />} 
-            />
-            <MetricCard 
-              label="Cloud Cover" 
-              value={`${current.cloudiness ?? 0}%`} 
-              subValue={
-                current.cloudiness > 80 ? 'Overcast' : 
-                current.cloudiness > 30 ? 'Partly Cloudy' : 'Clear Sky'
-              } 
-              icon={<Cloud className="w-5 h-5 text-blue-400" />} 
-            />
-            
-            <MetricCard 
-              label="Dew Point" 
-              value={`${current.dewpointTemperature != null ? current.dewpointTemperature : '--'}°C`} 
-              subValue={
-                (current.temperatureC - current.dewpointTemperature) <= 2 
-                  ? 'High Fog/Mist Risk' 
-                  : 'Comfortable'
-              } 
-              icon={<CloudFog className="w-5 h-5 text-blue-400" />} 
-            />
-          </section>
-        )}
-
-      </div>
-    </div>
-  );
-}
-
-function MetricCard({ label, value, subValue, icon }) {
-  return (
-    <div className="bg-slate-900/30 border border-slate-800/50 rounded-2xl p-5 hover:bg-slate-900/50 transition-colors">
-      <div className="flex justify-between items-center mb-3">
-        <span className="text-[11px] font-bold text-slate-400 tracking-widest uppercase">{label}</span>
-        {icon}
-      </div>
-      <div>
-        <p className="text-2xl font-bold text-slate-100 tracking-tight">{value}</p>
-        <p className="text-xs text-slate-500 mt-1 font-medium">{subValue}</p>
       </div>
     </div>
   );
