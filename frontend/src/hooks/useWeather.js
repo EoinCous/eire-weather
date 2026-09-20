@@ -11,6 +11,7 @@ export function useWeather(defaultLat = 53.7374, defaultLon = -7.9061) {
   useEffect(() => {
     let isMounted = true;
     setLoading(true);
+    setError(null);
 
     Promise.all([
       fetch(`http://localhost:8080/api/v1/weather/forecast?lat=${coords.lat}&lon=${coords.lon}`)
@@ -27,7 +28,7 @@ export function useWeather(defaultLat = 53.7374, defaultLon = -7.9061) {
     })
     .catch(err => {
       if (!isMounted) return;
-      setError(err);
+      setError(typeof err === 'string' ? err : 'Error loading weather data');
       setLoading(false);
     });
 
@@ -52,5 +53,34 @@ export function useWeather(defaultLat = 53.7374, defaultLon = -7.9061) {
     }
   };
 
-  return { weather, warnings, locationName, loading, error, requestLocation };
+  // Forward Geocoding: Search place name -> [lat, lon]
+  const searchLocation = async (query) => {
+    if (!query || !query.trim()) return;
+
+    try {
+      setLoading(true);
+      setError(null);
+
+      const res = await fetch(
+        `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}&limit=1`
+      );
+      const data = await res.json();
+
+      if (data && data.length > 0) {
+        const firstResult = data[0];
+        setCoords({
+          lat: parseFloat(firstResult.lat),
+          lon: parseFloat(firstResult.lon),
+        });
+      } else {
+        setError(`No coordinates found for "${query}"`);
+        setLoading(false);
+      }
+    } catch {
+      setError('Failed to search location. Please try again.');
+      setLoading(false);
+    }
+  };
+
+  return { weather, warnings, locationName, loading, error, requestLocation, searchLocation };
 }
