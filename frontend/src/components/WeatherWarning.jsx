@@ -1,4 +1,5 @@
 import { useWeather } from "../hooks/useWeather";
+import { AlertCircle, ShieldAlert, AlertTriangle, MapPin } from "lucide-react";
 
 // Helper for Warning Level visual styling (Yellow / Orange / Red)
 const getWarningLevelStyles = (level) => {
@@ -89,7 +90,7 @@ export default function WeatherWarning() {
                             <MapPin className="w-4 h-4 text-slate-400 mt-0.5 shrink-0" />
                             <p className="text-xs text-slate-300 leading-relaxed">
                                 <span className="font-semibold text-slate-200">Affected Regions: </span>
-                                {warning.regions.join(', ')}
+                                {warning.regions.length >= 26 ? 'Nationwide' : warning.regions.join(', ')}
                             </p>
                             </div>
                         )}

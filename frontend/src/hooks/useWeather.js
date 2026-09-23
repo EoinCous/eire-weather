@@ -1,5 +1,8 @@
 import { useState, useEffect } from 'react';
 
+const BASE_URL = "http://ec2-54-78-124-210.eu-west-1.compute.amazonaws.com:8080/api/v1/weather";
+const LOCAL_BASE_URL = "http://localhost:8080/api/v1/weather";
+
 export function useWeather(defaultLat = 53.7374, defaultLon = -7.9061) {
   const [weather, setWeather] = useState(null);
   const [warnings, setWarnings] = useState([]);
@@ -7,16 +10,17 @@ export function useWeather(defaultLat = 53.7374, defaultLon = -7.9061) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [coords, setCoords] = useState({ lat: defaultLat, lon: defaultLon });
-
+ 
   useEffect(() => {
+    
     let isMounted = true;
     setLoading(true);
     setError(null);
 
     Promise.all([
-      fetch(`http://localhost:8080/api/v1/weather/forecast?lat=${coords.lat}&lon=${coords.lon}`)
+      fetch(`${BASE_URL}/forecast?lat=${coords.lat}&lon=${coords.lon}`)
         .then(res => res.ok ? res.json() : Promise.reject('Failed to fetch weather')),
-      fetch(`http://localhost:8080/api/v1/weather/warnings`)
+      fetch(`${BASE_URL}/warnings`)
         .then(res => res.ok ? res.json() : [])
         .catch(() => [])
     ])
