@@ -86,5 +86,5 @@ export function useWeather(defaultLat = 53.7374, defaultLon = -7.9061) {
     }
   };
 
-  return { weather, warnings, locationName, loading, error, requestLocation, searchLocation };
+  return { coords, weather, warnings, locationName, loading, error, requestLocation, searchLocation };
 }

@@ -58,3 +58,6 @@ build/
 .vscode/
 
 *.txt
+
+.env.dev
+.env.prod

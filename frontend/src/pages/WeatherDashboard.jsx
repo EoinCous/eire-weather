@@ -1,16 +1,17 @@
 import { useState } from 'react';
 import { useWeather } from '../hooks/useWeather';
 import { 
-  Droplet, MapPin, Loader2, AlertCircle, Search
+  MapPin, Loader2, AlertCircle, Search
 } from 'lucide-react';
 import WeatherChart from '../components/WeatherChart';
 import DailyForecast from '../components/DailyForecast';
 import CurrentConditions from '../components/CurrentConditions';
 import { WeatherIcon } from '../components/WeatherIcon';
 import WeatherWarning from '../components/WeatherWarning';
+import SunMoonInfo from '../components/SunMoonInfo';
 
 export default function WeatherDashboard() {
-  const { weather, locationName, loading, error, requestLocation, searchLocation } = useWeather();
+  const { coords, weather, locationName, loading, error, requestLocation, searchLocation } = useWeather();
   const [searchInput, setSearchInput] = useState('');
 
   const handleSearchSubmit = (e) => {
@@ -100,10 +101,10 @@ export default function WeatherDashboard() {
 
         <CurrentConditions current={current} />
 
+        <SunMoonInfo lat={coords.lat} lon={coords.lon} />
+
         {/* 24h Rainfall & Temperature */}
         {hourlyForecasts && <WeatherChart hourlyForecasts={hourlyForecasts} WeatherIcon={WeatherIcon} />}
-
-
 
         {/* 10-day forecast */}
         {hourlyForecasts && (
