@@ -104,7 +104,7 @@ export default function WeatherDashboard() {
         <SunMoonInfo lat={coords.lat} lon={coords.lon} />
 
         {/* 24h Rainfall & Temperature */}
-        {hourlyForecasts && <WeatherChart hourlyForecasts={hourlyForecasts} WeatherIcon={WeatherIcon} />}
+        {hourlyForecasts && <WeatherChart hourlyForecasts={hourlyForecasts} />}
 
         {/* 10-day forecast */}
         {hourlyForecasts && (
