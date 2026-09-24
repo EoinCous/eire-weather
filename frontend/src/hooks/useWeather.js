@@ -1,7 +1,6 @@
 import { useState, useEffect } from 'react';
 
-const BASE_URL = "http://ec2-54-78-124-210.eu-west-1.compute.amazonaws.com:8080/api/v1/weather";
-const LOCAL_BASE_URL = "http://localhost:8080/api/v1/weather";
+const BASE_URL = import.meta.env.VITE_API_BASE_URL;
 
 export function useWeather(defaultLat = 53.7374, defaultLon = -7.9061) {
   const [weather, setWeather] = useState(null);

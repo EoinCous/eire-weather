@@ -59,5 +59,4 @@ build/
 
 *.txt
 
-.env.dev
-.env.prod
+.env
