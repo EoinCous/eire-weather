@@ -1,7 +1,6 @@
 import { useState, useEffect } from 'react';
 
-const VITE_BASE_URL = import.meta.env.VITE_API_BASE_URL || '/api/v1/weather';
-const BASE_URL = "http://ec2-54-78-124-210.eu-west-1.compute.amazonaws.com:8080/api/v1/weather";
+const BASE_URL = import.meta.env.VITE_API_BASE_URL || '/api/v1/weather';
 
 
 export function useWeather(defaultLat = 53.7374, defaultLon = -7.9061) {

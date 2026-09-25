@@ -54,63 +54,61 @@ export default function WeatherDashboard() {
   const { current, hourlyForecasts } = weather;
 
   return (
-    <div className="min-h-dvh bg-slate-950 bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-slate-900 via-slate-950 to-slate-950 text-slate-100 p-4 md:p-8">
-      <div className="max-w-4xl mx-auto space-y-6">
+    <div className="max-w-4xl mx-auto space-y-6">
 
-        {/* Header */}
-        <header className="flex flex-col sm:flex-row justify-between items-center gap-4 bg-slate-900/40 border border-slate-800/60 rounded-2xl p-4 md:px-6 shadow-lg">
-          
-          {/* Logo & Location */}
-          <div className="flex items-center justify-between w-full sm:w-auto">
-            <div>
-              <h1 className="text-xl font-bold text-white tracking-tight">
-                ÉireWeather
-              </h1>
-              <div className="flex items-center gap-1.5 mt-0.5 text-slate-400">
-                <MapPin className="w-3.5 h-3.5 text-blue-400" />
-                <span className="text-sm font-medium">{locationName}</span>
-              </div>
+      {/* Header */}
+      <header className="flex flex-col sm:flex-row justify-between items-center gap-4 bg-slate-900/40 border border-slate-800/60 rounded-2xl p-4 md:px-6 shadow-lg">
+        
+        {/* Logo & Location */}
+        <div className="flex items-center justify-between w-full sm:w-auto">
+          <div>
+            <h1 className="text-xl font-bold text-white tracking-tight">
+              ÉireWeather
+            </h1>
+            <div className="flex items-center gap-1.5 mt-0.5 text-slate-400">
+              <MapPin className="w-3.5 h-3.5 text-blue-400" />
+              <span className="text-sm font-medium">{locationName}</span>
             </div>
           </div>
+        </div>
 
-          {/* Search Bar & Location Button */}
-          <div className="flex items-center gap-2 w-full sm:w-auto">
-            <form onSubmit={handleSearchSubmit} className="relative flex-1 sm:w-64">
-              <input
-                type="text"
-                placeholder="Search city or town..."
-                value={searchInput}
-                onChange={(e) => setSearchInput(e.target.value)}
-                className="w-full bg-slate-950/60 border border-slate-800 rounded-xl pl-9 pr-4 py-2 text-sm text-slate-100 placeholder-slate-500 focus:outline-none focus:border-blue-500/80 focus:ring-1 focus:ring-blue-500/80 transition-all"
-              />
-              <Search className="w-4 h-4 text-slate-500 absolute left-3 top-1/2 -translate-y-1/2" />
-            </form>
+        {/* Search Bar & Location Button */}
+        <div className="flex items-center gap-2 w-full sm:w-auto">
+          <form onSubmit={handleSearchSubmit} className="relative flex-1 sm:w-64">
+            <input
+              type="text"
+              placeholder="Search city or town..."
+              value={searchInput}
+              onChange={(e) => setSearchInput(e.target.value)}
+              className="w-full bg-slate-950/60 border border-slate-800 rounded-xl pl-9 pr-4 py-2 text-sm text-slate-100 placeholder-slate-500 focus:outline-none focus:border-blue-500/80 focus:ring-1 focus:ring-blue-500/80 transition-all"
+            />
+            <Search className="w-4 h-4 text-slate-500 absolute left-3 top-1/2 -translate-y-1/2" />
+          </form>
 
-            <button 
-              onClick={() => requestLocation()}
-              title="Use Current Location"
-              className="flex items-center justify-center p-2.5 sm:px-4 sm:py-2 text-sm font-medium bg-blue-600 hover:bg-blue-500 active:bg-blue-700 transition-colors text-white rounded-xl shadow-md flex-shrink-0"
-            >
-              <MapPin className="w-4 h-4" />
-              <span className="hidden md:inline ml-2">Current Location</span>
-            </button>
-          </div>
-        </header>
+          <button 
+            onClick={() => requestLocation()}
+            title="Use Current Location"
+            className="flex items-center justify-center p-2.5 sm:px-4 sm:py-2 text-sm font-medium bg-blue-600 hover:bg-blue-500 active:bg-blue-700 transition-colors text-white rounded-xl shadow-md flex-shrink-0"
+          >
+            <MapPin className="w-4 h-4" />
+            <span className="hidden md:inline ml-2">Current Location</span>
+          </button>
+        </div>
+      </header>
 
-        <WeatherWarning />
+      <WeatherWarning />
 
-        <CurrentConditions current={current} />
+      <CurrentConditions current={current} />
 
-        <SunMoonInfo lat={coords.lat} lon={coords.lon} />
+      <SunMoonInfo lat={coords.lat} lon={coords.lon} />
 
-        {/* 24h Rainfall & Temperature */}
-        {hourlyForecasts && <WeatherChart hourlyForecasts={hourlyForecasts} />}
+      {/* 24h Rainfall & Temperature */}
+      {hourlyForecasts && <WeatherChart hourlyForecasts={hourlyForecasts} />}
 
-        {/* 10-day forecast */}
-        {hourlyForecasts && (
-          <DailyForecast hourlyForecasts={hourlyForecasts} WeatherIcon={WeatherIcon} />
-        )}
-      </div>
+      {/* 10-day forecast */}
+      {hourlyForecasts && (
+        <DailyForecast hourlyForecasts={hourlyForecasts} WeatherIcon={WeatherIcon} />
+      )}
     </div>
   );
 }
