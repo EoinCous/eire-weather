@@ -7,7 +7,7 @@ import WeatherChart from '../components/WeatherChart';
 import DailyForecast from '../components/DailyForecast';
 import CurrentConditions from '../components/CurrentConditions';
 import { WeatherIcon } from '../components/WeatherIcon';
-import WeatherWarning from '../components/WeatherWarning';
+import WeatherWarnings from '../components/WeatherWarnings';
 import SunMoonInfo from '../components/SunMoonInfo';
 
 export default function WeatherDashboard() {
@@ -96,7 +96,7 @@ export default function WeatherDashboard() {
         </div>
       </header>
 
-      <WeatherWarning />
+      <WeatherWarnings />
 
       <CurrentConditions current={current} />
 
