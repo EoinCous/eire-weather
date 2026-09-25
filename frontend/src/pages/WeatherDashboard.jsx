@@ -54,7 +54,7 @@ export default function WeatherDashboard() {
   const { current, hourlyForecasts } = weather;
 
   return (
-    <div className="min-h-screen bg-slate-950 bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-slate-900 via-slate-950 to-slate-950 text-slate-100 p-4 md:p-8">
+    <div className="min-h-dvh bg-slate-950 bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-slate-900 via-slate-950 to-slate-950 text-slate-100 p-4 md:p-8">
       <div className="max-w-4xl mx-auto space-y-6">
 
         {/* Header */}
