@@ -71,11 +71,11 @@ export default function WeatherDashboard() {
 
       <CurrentConditions current={current} />
 
-      <SunMoonInfo lat={coords.lat} lon={coords.lon} />
-
       {/* 24h Rainfall & Temperature */}
       {hourlyForecasts && <WeatherChart hourlyForecasts={hourlyForecasts} />}
 
+      <SunMoonInfo lat={coords.lat} lon={coords.lon} />
+      
       {/* 10-day forecast */}
       {hourlyForecasts && (
         <DailyForecast hourlyForecasts={hourlyForecasts} WeatherIcon={WeatherIcon} />
