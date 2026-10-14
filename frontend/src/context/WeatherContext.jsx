@@ -95,15 +95,42 @@ function getCurrentPosition() {
    Nominatim helpers
 ========================================================= */
 
-function getLocationName(address) {
-  return (
-    address?.city ||
+function getLocationName(address, displayName = '') {
+  if (!address && displayName) {
+    return displayName.split(',')[0].trim();
+  }
+  console.log(address)
+
+  const locality =
     address?.town ||
+    address?.city ||
     address?.village ||
     address?.municipality ||
-    address?.county ||
-    'Unknown Location'
-  );
+    address?.suburb ||
+    address?.neighbourhood;
+
+  let county = address?.county;
+
+  if (county && !county.toLowerCase().startsWith('county') && !county.toLowerCase().startsWith('co.')) {
+    county = `Co. ${county}`;
+  }
+
+  if (locality && county) {
+    return `${locality}, ${county}`;
+  }
+
+  if (locality) return locality;
+
+  if (county) return county;
+
+  const broaderLocation = address?.state || address?.country;
+  if (broaderLocation) return broaderLocation;
+
+  if (displayName) {
+    return displayName.split(',')[0].trim();
+  }
+
+  return 'Unknown Location';
 }
 
 async function reverseGeocode(lat, lon, signal) {
@@ -118,7 +145,7 @@ async function reverseGeocode(lat, lon, signal) {
 
   const data = await response.json();
 
-  return getLocationName(data.address);
+  return getLocationName(data.address, data.display_name);
 }
 
 /* =========================================================
@@ -432,53 +459,94 @@ export function WeatherProvider({ children }) {
       setLoading(true);
       setError(null);
 
+      // Restrict Nominatim search strictly to IE (Republic of Ireland) & GB (UK / Northern Ireland)
+      // Request limit=5 so we can filter out non-NI UK locations if necessary
       const response = await fetch(
-        `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(
+        `https://nominatim.openstreetmap.org/search?format=json&addressdetails=1&countrycodes=ie,gb&q=${encodeURIComponent(
           query.trim()
-        )}&limit=1`
+        )}&limit=5`,
+        {
+          headers: {
+            'User-Agent': 'EireWeatherApp/1.0',
+          },
+        }
       );
 
       if (!response.ok) {
-        throw new Error(
-          'Failed to search location'
-        );
+        throw new Error('Failed to search location');
       }
 
       const data = await response.json();
 
       if (!data?.length) {
-        setError(
-          `No location found for "${query}"`
-        );
-
+        setError(`No location found in Ireland or Northern Ireland for "${query}"`);
         setLoading(false);
         return;
       }
 
-      const result = data[0];
+      // Valid Northern Ireland counties list to ensure UK results stay within NI
+      const niCounties = [
+        'antrim',
+        'armagh',
+        'down',
+        'fermanagh',
+        'londonderry',
+        'derry',
+        'tyrone',
+        'county antrim',
+        'county armagh',
+        'county down',
+        'county fermanagh',
+        'county londonderry',
+        'county derry',
+        'county tyrone'
+      ];
+
+      // Find the first result that is either in the Republic of Ireland (IE) or in Northern Ireland
+      const filteredResult = data.find((item) => {
+        const countryCode = item.address?.country_code?.toLowerCase();
+        const county = item.address?.county?.toLowerCase() || '';
+        const state = item.address?.state?.toLowerCase() || '';
+        
+        // Match Republic of Ireland
+        if (countryCode === 'ie') {
+          return true;
+        }
+
+        // Match Northern Ireland within UK results
+        if (countryCode === 'gb' || countryCode === 'uk') {
+          return (
+            state.includes('northern ireland') ||
+            niCounties.some((niCounty) => county.includes(niCounty))
+          );
+        }
+
+        return false;
+      });
+      if (!filteredResult) {
+        setError(`No matches found in Ireland or Northern Ireland for "${query}"`);
+        setLoading(false);
+        return;
+      }
+
+      const name = getLocationName(filteredResult.address, filteredResult.display_name);
 
       const newLocation = {
-        lat: parseFloat(result.lat),
-        lon: parseFloat(result.lon),
-        name: getLocationName(
-          result.address
-        ),
+        lat: parseFloat(filteredResult.lat),
+        lon: parseFloat(filteredResult.lon),
+        name: name
       };
 
       saveLocation(newLocation);
-
-      setLocationName(
-        newLocation.name
-      );
-
+      setLocationName(newLocation.name);
       setCoords({
         lat: newLocation.lat,
         lon: newLocation.lon,
       });
+
     } catch (err) {
       setError(
-        err.message ||
-          'Failed to search location. Please try again.'
+        'Failed to search location. Please try again.'
       );
 
       setLoading(false);
