@@ -26,23 +26,23 @@ jobs:
         working-directory: ./backend
         run: mvn clean package -DskipTests
 
-      # 4. Copy built JAR from weather-service/target/ directory
+      # 4. Copy built JAR from backend/target/ directory
       - name: Copy JAR to App Directory
         run: |
           mkdir -p /home/ec2-user/app-build
-          cp ./target/weather-service-*.jar /home/ec2-user/app-build/weather-service-0.0.1-SNAPSHOT.jar
+          cp ./backend/target/*.jar /home/ec2-user/app-build/weather-service.jar
           
           # Verification: Check that the file exists in destination
-          ls -lh /home/ec2-user/app-build/weather-service-0.0.1-SNAPSHOT.jar
+          ls -lh /home/ec2-user/app-build/weather-service.jar
 
       # 5. Stop previous process and restart backend
       - name: Restart Application
         run: |
-          # Stop active Java process if runningt p
+          # Stop active Java process if running
           kill -15 $(pgrep -f 'java -jar') || true
           
           # Pause 2 seconds for graceful release of port 8080
           sleep 2
           
           # Start updated app in background
-          nohup java -jar /home/ec2-user/app-build/weatherservice-0.0.1-SNAPSHOT.jar > /home/ec2-user/app.log 2>&1 &
+          nohup java -jar /home/ec2-user/app-build/weather-service.jar > /home/ec2-user/app.log 2>&1 &
