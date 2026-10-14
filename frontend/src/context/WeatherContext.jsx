@@ -148,10 +148,6 @@ async function reverseGeocode(lat, lon, signal) {
   return getLocationName(data.address, data.display_name);
 }
 
-/* =========================================================
-   Provider
-========================================================= */
-
 export function WeatherProvider({ children }) {
   /*
    * Read the saved location synchronously.

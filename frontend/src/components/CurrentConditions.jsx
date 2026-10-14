@@ -4,7 +4,8 @@ import {
   Gauge,
   CloudRain,
   Cloud,
-  CloudFog
+  CloudFog,
+  Sun
 } from 'lucide-react';
 
 import { WeatherIcon } from './WeatherIcon';
@@ -27,11 +28,31 @@ function getCloudDescription(cloudiness) {
   return 'Clear Sky';
 }
 
+function getUvDescription(uv) {
+  if (uv == null || Number.isNaN(Number(uv))) {
+    return { label: 'Unavailable', color: 'text-slate-400', iconColor: 'text-amber-400' };
+  }
+
+  const val = Number(uv);
+
+  if (val < 3) {
+    return { label: 'Low Risk', color: 'text-emerald-400', iconColor: 'text-emerald-400' };
+  }
+  if (val < 6) {
+    return { label: 'Moderate (SPF 30)', color: 'text-yellow-400', iconColor: 'text-yellow-400' };
+  }
+  if (val < 8) {
+    return { label: 'High (SPF 50)', color: 'text-orange-400', iconColor: 'text-orange-400' };
+  }
+  if (val < 11) {
+    return { label: 'Very High (Seek Shade)', color: 'text-red-400', iconColor: 'text-red-400' };
+  }
+
+  return { label: 'Extreme (Avoid Sun)', color: 'text-purple-400', iconColor: 'text-purple-400' };
+}
+
 function getFogRisk(temperature, dewPoint) {
-  if (
-    temperature == null ||
-    dewPoint == null
-  ) {
+  if (temperature == null || dewPoint == null) {
     return {
       label: 'Unavailable',
       color: 'text-slate-500',
@@ -75,6 +96,7 @@ function MetricCard({
   label,
   value,
   subValue,
+  subValueColor = 'text-slate-500',
   icon: Icon,
   iconClass = 'text-blue-400',
 }) {
@@ -104,7 +126,7 @@ function MetricCard({
           {value}
         </p>
 
-        <p className="mt-1.5 text-[11px] font-medium leading-tight text-slate-500">
+        <p className={`mt-1.5 text-[11px] font-medium leading-tight ${subValueColor}`}>
           {subValue}
         </p>
       </div>
@@ -116,9 +138,7 @@ export default function CurrentConditions({ current }) {
   if (!current) return null;
 
   const temperature =
-    current.temperatureC != null
-      ? Number(current.temperatureC)
-      : null;
+    current.temperatureC != null ? Number(current.temperatureC) : null;
 
   const dewPoint =
     current.dewpointTemperature != null
@@ -126,58 +146,43 @@ export default function CurrentConditions({ current }) {
       : null;
 
   const windSpeed =
-    current.windSpeedMps != null
-      ? Number(current.windSpeedMps)
-      : null;
+    current.windSpeedMps != null ? Number(current.windSpeedMps) : null;
 
   const humidity =
-    current.humidityPercent != null
-      ? Number(current.humidityPercent)
-      : null;
+    current.humidityPercent != null ? Number(current.humidityPercent) : null;
 
   const pressure =
-    current.pressureHpa != null
-      ? Number(current.pressureHpa)
-      : null;
+    current.pressureHpa != null ? Number(current.pressureHpa) : null;
 
   const rainfall =
-    current.precipitationMm != null
-      ? Number(current.precipitationMm)
-      : null;
+    current.precipitationMm != null ? Number(current.precipitationMm) : null;
 
   const cloudiness =
-    current.cloudiness != null
-      ? Number(current.cloudiness)
-      : null;
+    current.cloudiness != null ? Number(current.cloudiness) : null;
 
-  const fogRisk = getFogRisk(
-    temperature,
-    dewPoint
-  );
+  const uvIndex =
+    current.uvIndex != null ? Number(current.uvIndex) : null;
+
+  const fogRisk = getFogRisk(temperature, dewPoint);
+  const uvInfo = getUvDescription(uvIndex);
 
   const weatherDescription =
     current.weatherDescription ||
     current.weatherSymbol ||
     'Current conditions';
 
-  const windDescription = getWindDescription(
-    windSpeed
-  );
+  const windDescription = getWindDescription(windSpeed);
 
   return (
     <section className="relative overflow-hidden rounded-3xl border border-slate-800/80 bg-slate-900/40 p-5 shadow-2xl shadow-blue-950/20 backdrop-blur-xl md:p-7">
-
       {/* Ambient background */}
       <div className="pointer-events-none absolute -right-32 -top-32 h-96 w-96 rounded-full bg-blue-600/[0.08] blur-3xl" />
       <div className="pointer-events-none absolute -bottom-32 -left-32 h-80 w-80 rounded-full bg-sky-500/[0.06] blur-3xl" />
 
       {/* HERO */}
       <div className="relative z-10 flex flex-col gap-7 lg:flex-row lg:items-center lg:justify-between">
-
         {/* Temperature / Condition */}
         <div className="min-w-0">
-
-          {/* Status pill */}
           <div className="mb-4 inline-flex items-center gap-2 rounded-full border border-emerald-500/20 bg-emerald-500/[0.06] px-3 py-1.5">
             <span className="relative flex h-2 w-2">
               <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-40" />
@@ -189,12 +194,9 @@ export default function CurrentConditions({ current }) {
             </span>
           </div>
 
-          {/* Main temperature */}
           <div className="flex items-start">
             <span className="text-7xl font-black tracking-[-0.06em] text-white md:text-8xl">
-              {temperature != null
-                ? temperature
-                : '—'}
+              {temperature != null ? temperature : '—'}
             </span>
 
             {temperature != null && (
@@ -204,7 +206,6 @@ export default function CurrentConditions({ current }) {
             )}
           </div>
 
-          {/* Weather description */}
           <p className="mt-2 max-w-md text-lg font-semibold capitalize text-slate-200 md:text-xl">
             {weatherDescription}
           </p>
@@ -212,7 +213,6 @@ export default function CurrentConditions({ current }) {
 
         {/* HERO ICON */}
         <div className="relative flex shrink-0 items-center justify-center self-center lg:self-auto">
-
           <div className="absolute h-40 w-40 rounded-full bg-blue-500/[0.08] blur-3xl md:h-52 md:w-52" />
 
           <div className="relative rounded-full border border-slate-800/50 bg-slate-950/20 p-4">
@@ -247,7 +247,11 @@ export default function CurrentConditions({ current }) {
         <MetricCard
           label="Humidity"
           value={formatValue(humidity, '%')}
-          subValue="Relative humidity"
+          subValue={
+            dewPoint != null 
+              ? `Dew point ${dewPoint}°C • ${fogRisk.label}`
+              : 'Relative humidity'
+          }
           icon={Droplet}
           iconClass="text-cyan-400"
         />
@@ -277,15 +281,11 @@ export default function CurrentConditions({ current }) {
         />
 
         <MetricCard
-          label="Dew Point"
-          value={formatValue(dewPoint, '°C')}
-          subValue={fogRisk.label}
-          icon={CloudFog}
-          iconClass={
-            fogRisk.color.includes('amber')
-              ? 'text-amber-400'
-              : 'text-slate-400'
-          }
+          label="UV Index"
+          value={formatValue(uvIndex)}
+          subValue={uvInfo.label}
+          icon={Sun}
+          iconClass={uvInfo.iconColor}
         />
       </div>
     </section>

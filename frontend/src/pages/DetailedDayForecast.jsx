@@ -10,7 +10,7 @@ import {
   Gauge,
   Wind,
   Thermometer,
-  CircleGauge,
+  Sun,
 } from 'lucide-react';
 
 import { WeatherIcon } from '../components/WeatherIcon';
@@ -53,10 +53,7 @@ function getWindDescription(speed) {
 }
 
 function getFogRisk(temperature, dewPoint) {
-  if (
-    temperature == null ||
-    dewPoint == null
-  ) {
+  if (temperature == null || dewPoint == null) {
     return null;
   }
 
@@ -71,6 +68,16 @@ function getFogRisk(temperature, dewPoint) {
   }
 
   return null;
+}
+
+function getUvColorClass(uv) {
+  if (uv == null || Number.isNaN(Number(uv))) return 'text-amber-400';
+  const val = Number(uv);
+  if (val < 3) return 'text-emerald-400';
+  if (val < 6) return 'text-yellow-400';
+  if (val < 8) return 'text-orange-400';
+  if (val < 11) return 'text-red-400';
+  return 'text-purple-400';
 }
 
 function StatCard({
@@ -151,18 +158,19 @@ export default function DetailedDayForecast() {
       return {
         totalRain: null,
         maxWind: null,
+        maxUv: null,
         avgHumidity: null,
         avgCloudiness: null,
         avgPressure: null,
       };
     }
 
-    const validTemperatures = hourlyData
-      .map((hour) => Number(hour.temperatureC))
-      .filter((value) => !Number.isNaN(value));
-
     const validWind = hourlyData
       .map((hour) => Number(hour.windSpeedMps))
+      .filter((value) => !Number.isNaN(value));
+
+    const validUv = hourlyData
+      .map((hour) => Number(hour.uvIndex))
       .filter((value) => !Number.isNaN(value));
 
     const validHumidity = hourlyData
@@ -194,28 +202,24 @@ export default function DetailedDayForecast() {
           ? Math.max(...validWind)
           : null,
 
+      maxUv:
+        validUv.length > 0
+          ? Math.max(...validUv)
+          : null,
+
       avgHumidity:
         validHumidity.length > 0
-          ? validHumidity.reduce(
-              (sum, value) => sum + value,
-              0
-            ) / validHumidity.length
+          ? validHumidity.reduce((sum, value) => sum + value, 0) / validHumidity.length
           : null,
 
       avgCloudiness:
         validCloudiness.length > 0
-          ? validCloudiness.reduce(
-              (sum, value) => sum + value,
-              0
-            ) / validCloudiness.length
+          ? validCloudiness.reduce((sum, value) => sum + value, 0) / validCloudiness.length
           : null,
 
       avgPressure:
         validPressure.length > 0
-          ? validPressure.reduce(
-              (sum, value) => sum + value,
-              0
-            ) / validPressure.length
+          ? validPressure.reduce((sum, value) => sum + value, 0) / validPressure.length
           : null,
     };
   }, [hourlyData]);
@@ -242,9 +246,7 @@ export default function DetailedDayForecast() {
     <div className="min-h-screen bg-slate-950 text-slate-100 p-4 md:p-8">
       <div className="max-w-5xl mx-auto">
 
-        {/* =====================================================
-            BACK
-        ====================================================== */}
+        {/* BACK */}
         <button
           onClick={() => navigate(-1)}
           className="
@@ -260,9 +262,7 @@ export default function DetailedDayForecast() {
           </span>
         </button>
 
-        {/* =====================================================
-            DAY HERO
-        ====================================================== */}
+        {/* DAY HERO */}
         <section
           className="
             relative mb-5 overflow-hidden
@@ -275,7 +275,6 @@ export default function DetailedDayForecast() {
           <div className="pointer-events-none absolute -right-24 -top-24 h-72 w-72 rounded-full bg-blue-500/10 blur-3xl" />
 
           <div className="relative z-10 flex flex-col gap-8 md:flex-row md:items-center md:justify-between">
-
             <div>
               <p className="mb-2 text-[11px] font-bold uppercase tracking-[0.18em] text-blue-400">
                 Daily Forecast
@@ -324,11 +323,8 @@ export default function DetailedDayForecast() {
           </div>
         </section>
 
-        {/* =====================================================
-            DAILY SUMMARY
-        ====================================================== */}
-        <section className="mb-8 grid grid-cols-2 gap-3 md:grid-cols-5">
-
+        {/* DAILY SUMMARY */}
+        <section className="mb-8 grid grid-cols-2 gap-3 md:grid-cols-6">
           <StatCard
             icon={CloudRain}
             label="Rain"
@@ -347,6 +343,14 @@ export default function DetailedDayForecast() {
                 : 'Unavailable'
             }
             iconClass="text-blue-400"
+          />
+
+          <StatCard
+            icon={Sun}
+            label="Max UV"
+            value={dailyStats.maxUv != null ? formatNumber(dailyStats.maxUv, 1) : '—'}
+            subValue="Peak index"
+            iconClass={getUvColorClass(dailyStats.maxUv)}
           />
 
           <StatCard
@@ -374,9 +378,7 @@ export default function DetailedDayForecast() {
           />
         </section>
 
-        {/* =====================================================
-            SUN & MOON
-        ====================================================== */}
+        {/* SUN & MOON */}
         {coords?.lat != null && coords?.lon != null && (
           <div className="mb-8">
             <SunMoonInfo
@@ -387,9 +389,7 @@ export default function DetailedDayForecast() {
           </div>
         )}
 
-        {/* =====================================================
-            HOURLY BREAKDOWN
-        ====================================================== */}
+        {/* HOURLY BREAKDOWN */}
         <section>
           <div className="mb-4 px-2">
             <h2 className="text-sm font-semibold uppercase tracking-widest text-slate-400">
@@ -426,7 +426,7 @@ export default function DetailedDayForecast() {
                 Temp
               </span>
 
-              <div className="grid grid-cols-6 gap-4">
+              <div className="grid grid-cols-7 gap-3">
                 <span className="text-[10px] font-bold uppercase tracking-widest text-slate-600">
                   Rain
                 </span>
@@ -436,11 +436,15 @@ export default function DetailedDayForecast() {
                 </span>
 
                 <span className="text-[10px] font-bold uppercase tracking-widest text-slate-600">
-                  Humidity
+                  UV Index
+                </span>
+                
+                <span className="text-[10px] font-bold uppercase tracking-widest text-slate-600">
+                  Cloud
                 </span>
 
                 <span className="text-[10px] font-bold uppercase tracking-widest text-slate-600">
-                  Cloud
+                  Humidity
                 </span>
 
                 <span className="text-[10px] font-bold uppercase tracking-widest text-slate-600">
@@ -470,6 +474,11 @@ export default function DetailedDayForecast() {
                     ? Number(hour.windSpeedMps)
                     : null;
 
+                const uvIndex =
+                  hour.uvIndex != null
+                    ? Number(hour.uvIndex)
+                    : null;
+
                 const humidity =
                   hour.humidityPercent != null
                     ? Number(hour.humidityPercent)
@@ -490,10 +499,7 @@ export default function DetailedDayForecast() {
                     ? Number(hour.pressureHpa)
                     : null;
 
-                const fogRisk = getFogRisk(
-                  temperature,
-                  dewPoint
-                );
+                const fogRisk = getFogRisk(temperature, dewPoint);
 
                 return (
                   <div
@@ -505,9 +511,7 @@ export default function DetailedDayForecast() {
                       md:px-5
                     "
                   >
-                    {/* =========================
-                        DESKTOP
-                    ========================== */}
+                    {/* DESKTOP VIEW */}
                     <div className="hidden lg:grid lg:grid-cols-[90px_80px_90px_1fr] lg:items-center">
 
                       {/* Time */}
@@ -533,7 +537,7 @@ export default function DetailedDayForecast() {
                       </div>
 
                       {/* Metrics */}
-                      <div className="grid grid-cols-6 gap-4">
+                      <div className="grid grid-cols-7 gap-3">
 
                         <HourlyMetric
                           icon={Droplet}
@@ -560,14 +564,14 @@ export default function DetailedDayForecast() {
                         />
 
                         <HourlyMetric
-                          icon={Droplet}
-                          label="Humidity"
+                          icon={Sun}
+                          label="UV Index"
                           value={
-                            humidity != null
-                              ? `${Math.round(humidity)}%`
+                            uvIndex != null
+                              ? uvIndex.toFixed(1)
                               : '—'
                           }
-                          iconClass="text-sky-400"
+                          iconClass={getUvColorClass(uvIndex)}
                         />
 
                         <HourlyMetric
@@ -581,6 +585,17 @@ export default function DetailedDayForecast() {
                           iconClass="text-slate-400"
                         />
 
+                        <HourlyMetric
+                          icon={Droplet}
+                          label="Humidity"
+                          value={
+                            humidity != null
+                              ? `${Math.round(humidity)}%`
+                              : '—'
+                          }
+                          iconClass="text-sky-400"
+                        />
+                        
                         <HourlyMetric
                           icon={CloudFog}
                           label="Dew point"
@@ -610,9 +625,7 @@ export default function DetailedDayForecast() {
                       </div>
                     </div>
 
-                    {/* =========================
-                        MOBILE / TABLET
-                    ========================== */}
+                    {/* MOBILE / TABLET VIEW */}
                     <div className="lg:hidden">
 
                       {/* Primary row */}
@@ -644,8 +657,7 @@ export default function DetailedDayForecast() {
                         </div>
 
                         <div className="text-right">
-                          {rainfall != null &&
-                          rainfall > 0 ? (
+                          {rainfall != null && rainfall > 0 ? (
                             <div className="flex items-center justify-end gap-1 text-xs font-semibold text-cyan-400">
                               <CloudRain className="h-3 w-3" />
                               {rainfall.toFixed(1)} mm
@@ -659,7 +671,7 @@ export default function DetailedDayForecast() {
                       </div>
 
                       {/* Secondary metrics */}
-                      <div className="mt-5 grid grid-cols-2 gap-x-5 gap-y-4 border-t border-slate-800/50 pt-4 sm:grid-cols-3">
+                      <div className="mt-5 grid grid-cols-2 gap-x-5 gap-y-4 border-t border-slate-800/50 pt-4 sm:grid-cols-4">
 
                         <HourlyMetric
                           icon={Wind}
@@ -672,6 +684,17 @@ export default function DetailedDayForecast() {
                               : '—'
                           }
                           iconClass="text-blue-400"
+                        />
+
+                        <HourlyMetric
+                          icon={Sun}
+                          label="UV Index"
+                          value={
+                            uvIndex != null
+                              ? uvIndex.toFixed(1)
+                              : '—'
+                          }
+                          iconClass={getUvColorClass(uvIndex)}
                         />
 
                         <HourlyMetric

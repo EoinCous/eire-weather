@@ -13,21 +13,23 @@ import ie.eireweather.weatherservice.dto.xml.MetEireannResponseDto;
 
 import java.net.URI;
 import java.time.Instant;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.TreeMap;
-import java.util.stream.Collectors;
 
 @Service
 public class WeatherService {
 
     private final RestClient restClient;
+    private final UvService uvService;
 
     private static final String MET_EIREANN_API_URL = "http://openaccess.pf.api.met.ie/metno-wdb2ts/locationforecast?lat=%.4f;long=%.4f";
     private static final String USER_AGENT_VALUE = "EireWeatherApp/1.0";
 
-    public WeatherService() {
+    public WeatherService(UvService uvService) {
+        this.uvService = uvService;
         this.restClient = RestClient.builder()
             .requestFactory(new HttpComponentsClientHttpRequestFactory())
             .defaultHeader(HttpHeaders.USER_AGENT, USER_AGENT_VALUE)
@@ -52,10 +54,12 @@ public class WeatherService {
             .retrieve()
             .body(MetEireannResponseDto.class);
 
-        return mapToWeatherResponse(raw, lat, lon);
+        Map<Instant, Double> uvMap = uvService.getHourlyUvForecast(lat, lon);
+
+        return mapToWeatherResponse(raw, lat, lon, uvMap);
     }
 
-    private WeatherResponse mapToWeatherResponse(MetEireannResponseDto raw, double lat, double lon) {
+    private WeatherResponse mapToWeatherResponse(MetEireannResponseDto raw, double lat, double lon, Map<Instant, Double> uvMap) {
         if (raw == null || raw.product() == null || raw.product().timeEntries() == null) {
             return new WeatherResponse(lat, lon, null, List.of());
         }
@@ -63,7 +67,6 @@ public class WeatherService {
         Map<Instant, HourlyBuilder> forecastMap = new TreeMap<>();
 
         for (MetEireannResponseDto.TimeEntry entry : raw.product().timeEntries()) {
-            // Grouping by "to" timestamp ensures both interval and instant entries merge on the hour
             Instant timestamp = Instant.parse(entry.to()); 
             MetEireannResponseDto.Location loc = entry.location();
             
@@ -72,7 +75,6 @@ public class WeatherService {
             HourlyBuilder builder = forecastMap.computeIfAbsent(timestamp, k -> new HourlyBuilder(timestamp));
 
             if (entry.from().equals(entry.to())) {
-                // Point-in-time metrics
                 if (loc.cloudiness() != null) builder.cloudiness = loc.cloudiness().percent();
                 if (loc.dewpointTemperature() != null) builder.dewpointTemperature = loc.dewpointTemperature().value();
                 if (loc.temperature() != null) builder.temperature = loc.temperature().value();
@@ -81,22 +83,24 @@ public class WeatherService {
                 if (loc.humidity() != null) builder.humidityPercent = loc.humidity().value();
                 if (loc.pressure() != null) builder.pressureHpa = loc.pressure().value();
             } else {
-                // Interval metrics
                 if (loc.precipitation() != null) builder.precipitationMm = loc.precipitation().value();
                 if (loc.symbol() != null) builder.weatherSymbol = loc.symbol().id();
             }
         }
 
-        List<HourlyForecast> hourlyList = forecastMap.values().stream()
-                .map(HourlyBuilder::build)
-                .collect(Collectors.toList());
+        List<HourlyForecast> hourlyList = new ArrayList<>();
+
+        // Match each Met Éireann forecast timestamp to its exact Open-Meteo UV value
+        for (HourlyBuilder builder : forecastMap.values()) {
+            Double uv = uvMap.getOrDefault(builder.timestamp, 0.0);
+            hourlyList.add(builder.build(uv));
+        }
 
         HourlyForecast current = hourlyList.isEmpty() ? null : hourlyList.get(0);
 
         return new WeatherResponse(lat, lon, current, hourlyList);
     }
 
-    // Mutable helper class during iteration
     private static class HourlyBuilder {
         private final Instant timestamp;
         private Double cloudiness;
@@ -113,10 +117,10 @@ public class WeatherService {
             this.timestamp = timestamp;
         }
 
-        HourlyForecast build() {
+        HourlyForecast build(Double uvIndex) {
             return new HourlyForecast(
-                    timestamp, cloudiness, dewpointTemperature, temperature, precipitationMm, weatherSymbol,
-                    windSpeedMps, windDirection, humidityPercent, pressureHpa
+                timestamp, cloudiness, dewpointTemperature, temperature, precipitationMm, weatherSymbol,
+                windSpeedMps, windDirection, humidityPercent, pressureHpa, uvIndex
             );
         }
     }

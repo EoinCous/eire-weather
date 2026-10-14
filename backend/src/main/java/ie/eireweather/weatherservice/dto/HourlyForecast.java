@@ -12,5 +12,6 @@ public record HourlyForecast(
         Double windSpeedMps,
         String windDirection,
         Double humidityPercent,
-        Double pressureHpa
+        Double pressureHpa,
+        Double uvIndex
 ) {}
