@@ -88,7 +88,6 @@ function getHighestWarning(warnings) {
 function FormattedDescription({ htmlString, className = '' }) {
   if (!htmlString) return null;
 
-  // Use DOMParser to safely parse nodes without dangerouslySetInnerHTML
   const parser = new DOMParser();
   const doc = parser.parseFromString(htmlString, 'text/html');
   const nodes = Array.from(doc.body.childNodes);
@@ -299,6 +298,7 @@ export default function WeatherWarnings() {
           ${highestStyles.bg}
         `}
       >
+        {/* Warning Icon */}
         <div
           className={`
             flex h-10 w-10 shrink-0
@@ -313,12 +313,19 @@ export default function WeatherWarnings() {
           />
         </div>
 
+        {/* Title & Headline Summary */}
         <div className="min-w-0 flex-1">
           <div className="flex flex-wrap items-center gap-2">
             <span className="text-xs font-bold uppercase tracking-[0.14em] text-slate-200">
               Active Weather Warnings
             </span>
 
+            {/* Mobile-Visible Warning Count Badge */}
+            <span className="flex h-5 items-center justify-center rounded-full bg-slate-800/80 px-2 text-[10px] font-bold text-slate-300 border border-slate-700/50">
+              {warningCount}
+            </span>
+
+            {/* Highest Warning Level Badge */}
             <span
               className={`
                 rounded-full px-2 py-0.5
@@ -331,7 +338,7 @@ export default function WeatherWarnings() {
             </span>
           </div>
 
-          <p className="mt-1 truncate text-xs text-slate-500">
+          <p className="mt-1 truncate text-xs text-slate-400">
             {highestWarning?.headline ||
               `${warningCount} active ${
                 warningCount === 1 ? 'warning' : 'warnings'
@@ -339,11 +346,7 @@ export default function WeatherWarnings() {
           </p>
         </div>
 
-        <span className="hidden shrink-0 text-xs font-medium text-slate-500 sm:block">
-          {warningCount}{' '}
-          {warningCount === 1 ? 'warning' : 'warnings'}
-        </span>
-
+        {/* Chevron */}
         <ChevronDown
           className={`
             h-5 w-5 shrink-0
@@ -355,6 +358,7 @@ export default function WeatherWarnings() {
         />
       </button>
 
+      {/* Expanded Warning Details */}
       {isOpen && (
         <div className="border-t border-slate-800/60 p-3 md:p-4">
           <div className="space-y-3">
