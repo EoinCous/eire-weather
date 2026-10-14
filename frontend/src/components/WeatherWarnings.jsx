@@ -82,11 +82,79 @@ function getHighestWarning(warnings) {
   )[0];
 }
 
-function WarningDetails({ warning }) {
-  const styles = getWarningLevelStyles(
-    warning.level
-  );
+/**
+ * Parses raw HTML string from Met Éireann into structured React components
+ */
+function FormattedDescription({ htmlString, className = '' }) {
+  if (!htmlString) return null;
 
+  // Use DOMParser to safely parse nodes without dangerouslySetInnerHTML
+  const parser = new DOMParser();
+  const doc = parser.parseFromString(htmlString, 'text/html');
+  const nodes = Array.from(doc.body.childNodes);
+
+  return (
+    <div className={`space-y-2.5 ${className}`}>
+      {nodes.map((node, i) => {
+        if (node.nodeName === 'P') {
+          const text = node.textContent?.trim();
+          if (!text) return null;
+
+          const isHeader = text.toLowerCase().includes('potential impacts');
+
+          return (
+            <p
+              key={i}
+              className={
+                isHeader
+                  ? 'font-semibold text-slate-200 mt-2 text-xs md:text-sm'
+                  : 'text-xs md:text-sm leading-relaxed'
+              }
+            >
+              {text}
+            </p>
+          );
+        }
+
+        if (node.nodeName === 'UL') {
+          const listItems = Array.from(node.querySelectorAll('li'))
+            .map((li) => li.textContent?.trim())
+            .filter(Boolean);
+
+          if (listItems.length === 0) return null;
+
+          return (
+            <ul key={i} className="mt-1.5 space-y-1.5 pl-1">
+              {listItems.map((item, itemIdx) => (
+                <li
+                  key={itemIdx}
+                  className="flex items-start gap-2 text-xs md:text-sm leading-snug text-slate-300"
+                >
+                  <span className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-slate-400" />
+                  <span>{item}</span>
+                </li>
+              ))}
+            </ul>
+          );
+        }
+
+        const plainText = node.textContent?.trim();
+        if (plainText) {
+          return (
+            <p key={i} className="text-xs md:text-sm leading-relaxed">
+              {plainText}
+            </p>
+          );
+        }
+
+        return null;
+      })}
+    </div>
+  );
+}
+
+function WarningDetails({ warning }) {
+  const styles = getWarningLevelStyles(warning.level);
   const Icon = styles.icon;
 
   const onset = formatDateTime(warning.onset);
@@ -102,7 +170,6 @@ function WarningDetails({ warning }) {
         ${styles.bg}
       `}
     >
-      {/* Accent */}
       <div
         className={`
           absolute left-0 top-0 h-full w-1
@@ -111,9 +178,7 @@ function WarningDetails({ warning }) {
       />
 
       <div className="p-4 pl-5 md:p-5 md:pl-6">
-        {/* Warning heading */}
         <div className="flex items-start gap-3">
-
           <Icon
             className={`mt-0.5 h-6 w-6 shrink-0 ${styles.iconClass}`}
           />
@@ -156,52 +221,37 @@ function WarningDetails({ warning }) {
             </h3>
 
             {warning.description && (
-              <p
-                className={`
-                  mt-2 text-xs leading-relaxed
-                  md:text-sm
-                  ${styles.subText}
-                `}
-              >
-                {warning.description}
-              </p>
+              <FormattedDescription
+                htmlString={warning.description}
+                className={`mt-2 ${styles.subText}`}
+              />
             )}
           </div>
         </div>
 
-        {/* Timing */}
         {(onset || expiry || updated) && (
           <div className="mt-4 border-t border-slate-800/40 pt-3">
-
             <div className="flex flex-wrap gap-x-5 gap-y-2 text-[11px] text-slate-500">
-
               {onset && (
                 <span>
-                  <strong className="text-slate-300">
-                    From:
-                  </strong>{' '}
+                  <strong className="text-slate-300">From:</strong>{' '}
                   {onset}
                 </span>
               )}
 
               {expiry && (
                 <span>
-                  <strong className="text-slate-300">
-                    Until:
-                  </strong>{' '}
+                  <strong className="text-slate-300">Until:</strong>{' '}
                   {expiry}
                 </span>
               )}
 
               {updated && (
                 <span>
-                  <strong className="text-slate-300">
-                    Updated:
-                  </strong>{' '}
+                  <strong className="text-slate-300">Updated:</strong>{' '}
                   {updated}
                 </span>
               )}
-
             </div>
           </div>
         )}
@@ -212,7 +262,6 @@ function WarningDetails({ warning }) {
 
 export default function WeatherWarnings() {
   const { warnings } = useWeather();
-
   const [isOpen, setIsOpen] = useState(false);
 
   const sortedWarnings = useMemo(() => {
@@ -231,25 +280,13 @@ export default function WeatherWarnings() {
     return null;
   }
 
-  const highestWarning =
-    getHighestWarning(sortedWarnings);
-
-  const highestStyles =
-    getWarningLevelStyles(
-      highestWarning?.level
-    );
-
+  const highestWarning = getHighestWarning(sortedWarnings);
+  const highestStyles = getWarningLevelStyles(highestWarning?.level);
   const HighestIcon = highestStyles.icon;
-
-  const warningCount =
-    sortedWarnings.length;
+  const warningCount = sortedWarnings.length;
 
   return (
     <section className="overflow-hidden rounded-2xl border border-slate-800/70 bg-slate-900/40 shadow-xl">
-
-      {/* =====================================================
-          COLLAPSED HEADER
-      ====================================================== */}
       <button
         type="button"
         onClick={() => setIsOpen((open) => !open)}
@@ -262,8 +299,6 @@ export default function WeatherWarnings() {
           ${highestStyles.bg}
         `}
       >
-
-        {/* Warning icon */}
         <div
           className={`
             flex h-10 w-10 shrink-0
@@ -278,11 +313,8 @@ export default function WeatherWarnings() {
           />
         </div>
 
-        {/* Summary */}
         <div className="min-w-0 flex-1">
-
           <div className="flex flex-wrap items-center gap-2">
-
             <span className="text-xs font-bold uppercase tracking-[0.14em] text-slate-200">
               Active Weather Warnings
             </span>
@@ -302,22 +334,16 @@ export default function WeatherWarnings() {
           <p className="mt-1 truncate text-xs text-slate-500">
             {highestWarning?.headline ||
               `${warningCount} active ${
-                warningCount === 1
-                  ? 'warning'
-                  : 'warnings'
+                warningCount === 1 ? 'warning' : 'warnings'
               }`}
           </p>
         </div>
 
-        {/* Count */}
         <span className="hidden shrink-0 text-xs font-medium text-slate-500 sm:block">
           {warningCount}{' '}
-          {warningCount === 1
-            ? 'warning'
-            : 'warnings'}
+          {warningCount === 1 ? 'warning' : 'warnings'}
         </span>
 
-        {/* Chevron */}
         <ChevronDown
           className={`
             h-5 w-5 shrink-0
@@ -329,22 +355,15 @@ export default function WeatherWarnings() {
         />
       </button>
 
-      {/* =====================================================
-          EXPANDED WARNINGS
-      ====================================================== */}
       {isOpen && (
         <div className="border-t border-slate-800/60 p-3 md:p-4">
           <div className="space-y-3">
-            {sortedWarnings.map(
-              (warning, idx) => (
-                <WarningDetails
-                  key={
-                    warning.id || idx
-                  }
-                  warning={warning}
-                />
-              )
-            )}
+            {sortedWarnings.map((warning, idx) => (
+              <WarningDetails
+                key={warning.id || idx}
+                warning={warning}
+              />
+            ))}
           </div>
         </div>
       )}
