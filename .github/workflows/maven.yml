@@ -6,7 +6,7 @@
 # separate terms of service, privacy policy, and support
 # documentation.
 
-name: Java CI with Maven
+name: Build and Deploy Spring Boot to AWS EC2
 
 on:
   push:
@@ -18,15 +18,44 @@ jobs:
     runs-on: self-hosted
 
     steps:
-    - uses: actions/checkout@v4
+    # 1. Checkout repository code
+    - name: Checkout Code
+      uses: actions/checkout@v4
+      
+
     - name: Set up JDK 17
       uses: actions/setup-java@v4
       with:
         java-version: '17'
         distribution: 'temurin'
         cache: maven
+
     - name: Build with Maven
-      run: mvn -B package --file pom.xml
+      run: ./mvnw clean package -DskipTests
+
+    - name: Copy JAR to EC2
+      uses: appleboy/scp-action@v0.1.7
+      with:
+        host: ${{ secrets.EC2_HOST }}
+        username: ${{ secrets.EC2_USERNAME }}
+        key: ${{ secrets.EC2_SSH_KEY }}
+        source: "target/weatherservice-0.0.1-SNAPSHOT.jar"
+        target: "/home/ubuntu/app-build/"
+        strip_components: 1
+
+    - name: Restart Application on EC2
+      uses: appleboy/ssh-action@v1.0.3
+      with:
+        host: ${{ secrets.EC2_HOST }}
+        username: ${{ secrets.EC2_USERNAME }}
+        key: ${{ secrets.EC2_SSH_KEY }}
+        script: |
+          # Option A: If using systemd service
+          sudo systemctl restart eireweather-backend
+          
+          # OR Option B: If running via nohup background process
+          # kill -15 $(pgrep -f 'java -jar') || true
+          # nohup java -jar /home/ubuntu/app-build/weatherservice-0.0.1-SNAPSHOT.jar > /home/ubuntu/app.log 2>&1 &
 
     # Optional: Uploads the full dependency graph to GitHub to improve the quality of Dependabot alerts this repository can receive
     - name: Update dependency graph
