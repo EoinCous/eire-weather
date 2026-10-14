@@ -1,4 +1,4 @@
-import { useWeather } from '../hooks/useWeather';
+import { useWeather } from '../context/WeatherContext';
 import { 
   MapPin, Loader2, AlertCircle
 } from 'lucide-react';
@@ -11,7 +11,7 @@ import SunMoonInfo from '../components/SunMoonInfo';
 import { SearchBar } from '../components/SearchBar';
 
 export default function WeatherDashboard() {
-  const { coords, weather, locationName, loading, error, searchLocation, requestLocation } = useWeather();
+  const { coords, weather, locationName, loading, error, requestLocation } = useWeather();
 
   if (loading) {
     return (
@@ -64,7 +64,7 @@ export default function WeatherDashboard() {
         </div>
 
         {/* Search Bar & Location Button */}
-        <SearchBar searchLocation={searchLocation} requestLocation={requestLocation} />
+        <SearchBar />
       </header>
 
       <WeatherWarnings />

@@ -15,7 +15,7 @@ import {
 
 import { WeatherIcon } from '../components/WeatherIcon';
 import SunMoonInfo from '../components/SunMoonInfo';
-import { useWeather } from '../hooks/useWeather';
+import { useWeather } from '../context/WeatherContext';
 
 function formatNumber(value, decimals = 0) {
   if (value == null || Number.isNaN(Number(value))) {

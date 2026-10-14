@@ -3,11 +3,10 @@ import {
   AlertCircle,
   AlertTriangle,
   ChevronDown,
-  MapPin,
-  ShieldAlert,
+  ShieldAlert
 } from 'lucide-react';
 
-import { useWeather } from '../hooks/useWeather';
+import { useWeather } from '../context/WeatherContext';
 
 function getWarningLevelStyles(level) {
   const normalized = (level || 'Yellow').toLowerCase();
@@ -112,7 +111,6 @@ function WarningDetails({ warning }) {
       />
 
       <div className="p-4 pl-5 md:p-5 md:pl-6">
-
         {/* Warning heading */}
         <div className="flex items-start gap-3">
 
@@ -121,9 +119,7 @@ function WarningDetails({ warning }) {
           />
 
           <div className="min-w-0 flex-1">
-
             <div className="flex flex-wrap items-center gap-2">
-
               <span
                 className={`
                   rounded-md px-2.5 py-1

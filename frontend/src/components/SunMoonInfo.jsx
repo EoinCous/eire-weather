@@ -11,6 +11,7 @@ import {
   MoonStar,
 } from 'lucide-react';
 import { useMemo } from 'react';
+import { useWeather } from '../context/WeatherContext';
 
 function parseLocalDate(date) {
   if (date instanceof Date) {
@@ -85,7 +86,9 @@ function TimeRow({ icon: Icon, label, time, iconClass = 'text-slate-400' }) {
   );
 }
 
-export default function SunMoonInfo({ lat, lon, date = new Date() }) {
+export default function SunMoonInfo({ date = new Date() }) {
+  const { coords } = useWeather();
+  const { lat, lon } = coords;
   const data = useMemo(() => {
     const parsedDate = parseLocalDate(date);
 
