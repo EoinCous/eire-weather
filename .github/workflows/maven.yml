@@ -30,7 +30,7 @@ jobs:
       - name: Copy JAR to App Directory
         run: |
           mkdir -p /home/ec2-user/app-build
-          cp target/weatherservice-0.0.1-SNAPSHOT.jar /home/ec2-user/app-build/
+          cp target/weather-service-0.0.1-SNAPSHOT.jar /home/ec2-user/app-build/
           
           # Verification: Ensure file was copied
           ls -lh /home/ec2-user/app-build/
