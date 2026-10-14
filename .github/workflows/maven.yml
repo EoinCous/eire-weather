@@ -23,6 +23,7 @@ jobs:
 
       # 3. Build the JAR file locally on EC2
       - name: Build with Maven
+        working-directory: ./backend
         run: mvn clean package -DskipTests
 
       # 4. Copy built JAR locally (No Docker or SCP required)
