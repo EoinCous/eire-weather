@@ -302,50 +302,57 @@ export default function DetailedDayForecast() {
         >
           <div className="pointer-events-none absolute -right-24 -top-24 h-72 w-72 rounded-full bg-blue-500/10 blur-3xl" />
 
-          <div className="relative z-10 flex flex-col gap-8 md:flex-row md:items-center md:justify-between">
-            <div>
+          <div className="relative z-10 flex items-center justify-between gap-4">
+            <div className="min-w-0 flex-1">
               <p className="mb-2 text-[11px] font-bold uppercase tracking-[0.18em] text-blue-400">
                 Daily Forecast
               </p>
 
-              <h1 className="text-4xl font-black tracking-tight text-white md:text-5xl">
+              <h1 className="text-3xl font-black tracking-tight text-white sm:text-4xl md:text-5xl">
                 {daySummary.dayName}
               </h1>
 
-              <p className="mt-2 text-base font-medium text-slate-400">
+              <p className="mt-1 text-sm font-medium text-slate-400 sm:text-base">
                 {daySummary.dateStr}
               </p>
 
-              <div className="mt-6 flex items-end gap-4">
+              <div className="mt-4 flex items-end gap-4">
                 <div>
                   <p className="text-[10px] uppercase tracking-widest text-slate-500">
                     High
                   </p>
 
-                  <p className="text-4xl font-black text-white">
+                  <p className="text-3xl font-black text-white sm:text-4xl">
                     {daySummary.maxTemp}°
                   </p>
                 </div>
 
-                <div className="pb-1">
+                <div className="pb-0.5">
                   <p className="text-[10px] uppercase tracking-widest text-slate-600">
                     Low
                   </p>
 
-                  <p className="text-2xl font-bold text-slate-500">
+                  <p className="text-xl font-bold text-slate-500 sm:text-2xl">
                     {daySummary.minTemp}°
                   </p>
                 </div>
               </div>
             </div>
 
-            <div className="flex items-center justify-center self-center md:self-auto">
-              <div className="rounded-full border border-slate-800/60 bg-slate-950/30 p-5">
-                <WeatherIcon
-                  symbol={daySummary.symbol}
-                  className="h-28 w-28 text-blue-300 md:h-36 md:w-36"
-                  strokeWidth={1.25}
-                />
+            {/* Inline Weather Icon */}
+            <div className="relative flex shrink-0 items-center justify-center">
+              <div className="absolute h-28 w-28 rounded-full bg-blue-500/[0.08] blur-2xl md:h-44 md:w-44 md:blur-3xl" />
+
+              <div className="relative rounded-full border border-slate-800/50 bg-slate-950/20 p-2 sm:p-3 md:p-4">
+                <div className="rounded-full border border-slate-800/40 bg-slate-900/40 p-2.5 sm:p-3.5 md:p-5">
+                  <div className="text-blue-300 drop-shadow-[0_0_20px_rgba(96,165,250,0.25)]">
+                    <WeatherIcon
+                      symbol={daySummary.symbol}
+                      className="h-16 w-16 sm:h-20 sm:w-20 md:h-32 md:w-32"
+                      strokeWidth={1.25}
+                    />
+                  </div>
+                </div>
               </div>
             </div>
           </div>
@@ -759,7 +766,7 @@ export default function DetailedDayForecast() {
                           icon={Activity}
                           label="Air Quality"
                           value={
-                            airQuality != null
+                            airQuality != null && airQuality > 0
                               ? Math.round(airQuality)
                               : '—'
                           }

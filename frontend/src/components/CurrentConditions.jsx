@@ -208,10 +208,10 @@ export default function CurrentConditions({ current }) {
       <div className="pointer-events-none absolute -bottom-32 -left-32 h-80 w-80 rounded-full bg-sky-500/[0.06] blur-3xl" />
 
       {/* HERO */}
-      <div className="relative z-10 flex flex-col gap-7 lg:flex-row lg:items-center lg:justify-between">
+      <div className="relative z-10 flex items-center justify-between gap-4 lg:flex-row lg:items-center">
         {/* Temperature / Condition */}
-        <div className="min-w-0">
-          <div className="mb-4 inline-flex items-center gap-2 rounded-full border border-emerald-500/20 bg-emerald-500/[0.06] px-3 py-1.5">
+        <div className="min-w-0 flex-1">
+          <div className="mb- inline-flex items-center gap-2 rounded-full border border-emerald-500/20 bg-emerald-500/[0.06] px-3 py-1.5">
             <span className="relative flex h-2 w-2">
               <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-40" />
               <span className="relative inline-flex h-2 w-2 rounded-full bg-emerald-400" />
@@ -223,32 +223,32 @@ export default function CurrentConditions({ current }) {
           </div>
 
           <div className="flex items-start">
-            <span className="text-7xl font-black tracking-[-0.06em] text-white md:text-8xl">
+            <span className="text-6xl font-black tracking-[-0.06em] text-white sm:text-7xl md:text-8xl">
               {temperature != null ? temperature : '—'}
             </span>
 
             {temperature != null && (
-              <span className="ml-2 mt-3 text-3xl font-bold text-blue-400 md:text-4xl">
+              <span className="ml-1.5 mt-2 text-2xl font-bold text-blue-400 sm:text-3xl md:text-4xl">
                 °C
               </span>
             )}
           </div>
 
-          <p className="mt-2 max-w-md text-lg font-semibold capitalize text-slate-200 md:text-xl">
+          <p className="mt-1.5 max-w-md text-base font-semibold capitalize text-slate-200 sm:text-lg md:text-xl">
             {weatherDescription}
           </p>
         </div>
 
-        {/* HERO ICON */}
-        <div className="relative flex shrink-0 items-center justify-center self-center lg:self-auto">
-          <div className="absolute h-40 w-40 rounded-full bg-blue-500/[0.08] blur-3xl md:h-52 md:w-52" />
+        {/* HERO ICON - Inline on mobile with compact dimensions */}
+        <div className="relative flex shrink-0 items-center justify-center">
+          <div className="absolute h-28 w-28 rounded-full bg-blue-500/[0.08] blur-2xl md:h-52 md:w-52 md:blur-3xl" />
 
-          <div className="relative rounded-full border border-slate-800/50 bg-slate-950/20 p-4">
-            <div className="rounded-full border border-slate-800/40 bg-slate-900/40 p-5">
-              <div className="text-blue-300 drop-shadow-[0_0_30px_rgba(96,165,250,0.25)]">
+          <div className="relative rounded-full border border-slate-800/50 bg-slate-950/20 p-2 sm:p-3 md:p-4">
+            <div className="rounded-full border border-slate-800/40 bg-slate-900/40 p-2.5 sm:p-3.5 md:p-5">
+              <div className="text-blue-300 drop-shadow-[0_0_20px_rgba(96,165,250,0.25)]">
                 <WeatherIcon
                   symbol={current.weatherSymbol}
-                  className="h-28 w-28 md:h-36 md:w-36"
+                  className="h-14 w-14 sm:h-20 sm:w-20 md:h-36 md:w-36"
                   strokeWidth={1.25}
                 />
               </div>
