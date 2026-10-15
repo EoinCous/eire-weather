@@ -135,9 +135,7 @@ export default function SunMoonInfo({ date = new Date(), initialExpanded = false
         className="w-full px-5 py-4 md:px-6 flex items-center justify-between gap-4 text-left transition-colors hover:bg-slate-800/30 focus:outline-none"
       >
         <div className="flex items-center gap-3 min-w-0">
-          <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-amber-500/10 border border-amber-500/20">
-            <Sun className="w-4 h-4 text-amber-400" />
-          </div>
+          <Sun className="w-5 h-5 text-amber-400" />
 
           <div className="min-w-0">
             <h2 className="text-base font-semibold text-white">
