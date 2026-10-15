@@ -13,38 +13,15 @@ jobs:
     runs-on: self-hosted
 
     steps:
-      # 1. Checkout repository code directly on EC2
-      - name: Checkout Code
-        uses: actions/checkout@v4
-
-      # 2. Set up Java JDK 17
-      - name: Set up JDK 17
-        uses: actions/setup-java@v4
-        with:
-          java-version: '17'
-          distribution: 'temurin'
-          cache: maven
-
-      # 3. Build the JAR file locally on EC2
-      - name: Build with Maven
+      - name: Build Docker Image
         working-directory: ./backend
-        run: mvn clean package -DskipTests
+        run: docker build -t eireweather-backend .
 
-      # 4. Copy built JAR from backend/target/ directory
-      - name: Copy JAR to App Directory
+      - name: Restart Docker Container
         run: |
-          mkdir -p /home/ec2-user/app-build
-          cp ./backend/target/*.jar /home/ec2-user/app-build/weather-service.jar
+          # Stop and remove old container if it exists
+          docker stop weather-app || true
+          docker rm weather-app || true
           
-          # Verification: Check that the file exists in destination
-          ls -lh /home/ec2-user/app-build/weather-service.jar
-
-      # 5. Stop previous process and restart backend
-      - name: Restart Application
-        run: |
-          # Stop active Java process if running
-          kill -15 $(pgrep -f 'java -jar') || true
-          sleep 2
-          
-          # Prevent runner process tree cleanup from killing the background Java app
-          BUILD_ID=dontKillMe RUNNER_TRACKING_ID=0 nohup java -jar /home/ec2-user/app-build/weather-service.jar > /home/ec2-user/app.log 2>&1 &
+          # Run the new container in detached mode
+          docker run -d -p 8080:8080 --name weather-app --restart always eireweather-backend
