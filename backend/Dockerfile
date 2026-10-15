@@ -1,5 +1,5 @@
 # --- Stage 1: Build the JAR ---
-FROM maven:3.9-eclipse-temurin-17 AS builder
+FROM public.ecr.aws/docker/library/maven:3.9-eclipse-temurin-17 AS builder
 WORKDIR /app
 
 # Copy dependency definitions first (caches layers for faster builds)
