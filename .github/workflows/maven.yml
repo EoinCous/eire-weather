@@ -15,7 +15,7 @@ jobs:
     steps:
       - name: Build Docker Image
         working-directory: ./backend
-        run: docker build -t eireweather-backend .
+        run: docker build -t eireweather-backend -f Dockerfile ..
 
       - name: Restart Docker Container
         run: |
