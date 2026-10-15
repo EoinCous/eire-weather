@@ -11,7 +11,7 @@ COPY src ./src
 RUN mvn package -DskipTests
 
 # --- Stage 2: Production Runtime ---
-FROM eclipse-temurin-17-jre-alpine
+FROM public.ecr.aws/eclipse-temurin/eclipse-temurin:17-jre-alpine
 WORKDIR /app
 
 # Create a non-root user for security best practices
