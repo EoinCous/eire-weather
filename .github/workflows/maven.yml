@@ -3,15 +3,14 @@ name: Build and Deploy Spring Boot to AWS EC2
 on:
   push:
     branches: [ "main" ]
-
-jobs:
-  build-and-deploy:
-    runs-on: self-hosted
-
     # Only run this job if files inside the backend folder changed!
     paths:
       - 'backend/**'
       - '.github/workflows/maven.yml'
+
+jobs:
+  build-and-deploy:
+    runs-on: self-hosted
 
     steps:
       # 1. Checkout repository code directly on EC2
