@@ -1,11 +1,12 @@
 import {
   Wind,
   Droplet,
+  Thermometer,
   Gauge,
   CloudRain,
   Cloud,
-  CloudFog,
-  Sun
+  Sun,
+  Activity
 } from 'lucide-react';
 
 import { WeatherIcon } from './WeatherIcon';
@@ -49,6 +50,29 @@ function getUvDescription(uv) {
   }
 
   return { label: 'Extreme (Avoid Sun)', color: 'text-purple-400', iconColor: 'text-purple-400' };
+}
+
+function getAirQualityDescription(aqi) {
+  if (aqi == null || Number.isNaN(Number(aqi))) {
+    return { label: 'Unavailable', color: 'text-slate-400', iconColor: 'text-slate-400' };
+  }
+
+  const val = Number(aqi);
+
+  if (val <= 20) {
+    return { label: 'Good', color: 'text-emerald-400', iconColor: 'text-emerald-400' };
+  }
+  if (val <= 40) {
+    return { label: 'Fair', color: 'text-sky-400', iconColor: 'text-sky-400' };
+  }
+  if (val <= 60) {
+    return { label: 'Moderate', color: 'text-amber-400', iconColor: 'text-amber-400' };
+  }
+  if (val <= 80) {
+    return { label: 'Poor', color: 'text-orange-400', iconColor: 'text-orange-400' };
+  }
+
+  return { label: 'Very Poor', color: 'text-red-400', iconColor: 'text-red-400' };
 }
 
 function getFogRisk(temperature, dewPoint) {
@@ -163,8 +187,12 @@ export default function CurrentConditions({ current }) {
   const uvIndex =
     current.uvIndex != null ? Number(current.uvIndex) : null;
 
+  const airQuality =
+    current.airQuality != null ? Number(current.airQuality) : null;
+
   const fogRisk = getFogRisk(temperature, dewPoint);
   const uvInfo = getUvDescription(uvIndex);
+  const aqInfo = getAirQualityDescription(airQuality);
 
   const weatherDescription =
     current.weatherDescription ||
@@ -229,8 +257,8 @@ export default function CurrentConditions({ current }) {
         </div>
       </div>
 
-      {/* DETAILED METRICS */}
-      <div className="relative z-10 mt-3 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
+      {/* DETAILED METRICS (8 Cards) */}
+      <div className="relative z-10 mt-6 grid grid-cols-2 gap-3 sm:grid-cols-2 md:grid-cols-4 lg:grid-cols-4">
 
         <MetricCard
           label="Wind Speed"
@@ -247,13 +275,26 @@ export default function CurrentConditions({ current }) {
         <MetricCard
           label="Humidity"
           value={formatValue(humidity, '%')}
-          subValue={
-            dewPoint != null 
-              ? `Dew point ${dewPoint}°C • ${fogRisk.label}`
-              : 'Relative humidity'
-          }
+          subValue="Relative humidity"
           icon={Droplet}
           iconClass="text-cyan-400"
+        />
+
+        <MetricCard
+          label="Dew Point"
+          value={formatValue(dewPoint, '°C')}
+          subValue={fogRisk.label}
+          subValueColor={fogRisk.color}
+          icon={Thermometer}
+          iconClass="text-teal-400"
+        />
+
+        <MetricCard
+          label="Air Quality"
+          value={`${formatValue(airQuality)} / 100`}
+          subValue={`${aqInfo.label}`}
+          icon={Activity}
+          iconClass={aqInfo.iconColor}
         />
 
         <MetricCard

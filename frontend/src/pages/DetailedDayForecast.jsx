@@ -11,6 +11,7 @@ import {
   Wind,
   Thermometer,
   Sun,
+  Activity,
 } from 'lucide-react';
 
 import { WeatherIcon } from '../components/WeatherIcon';
@@ -78,6 +79,18 @@ function getUvColorClass(uv) {
   if (val < 8) return 'text-orange-400';
   if (val < 11) return 'text-red-400';
   return 'text-purple-400';
+}
+
+function getAirQualityDescription(aqi) {
+  if (aqi == null || Number.isNaN(Number(aqi))) {
+    return { label: 'Unavailable', color: 'text-slate-400' };
+  }
+  const val = Number(aqi);
+  if (val <= 20) return { label: 'Good', color: 'text-emerald-400' };
+  if (val <= 40) return { label: 'Fair', color: 'text-sky-400' };
+  if (val <= 60) return { label: 'Moderate', color: 'text-amber-400' };
+  if (val <= 80) return { label: 'Poor', color: 'text-orange-400' };
+  return { label: 'Very Poor', color: 'text-red-400' };
 }
 
 function StatCard({
@@ -159,6 +172,7 @@ export default function DetailedDayForecast() {
         totalRain: null,
         maxWind: null,
         maxUv: null,
+        maxAirQuality: null,
         avgHumidity: null,
         avgCloudiness: null,
         avgPressure: null,
@@ -171,6 +185,10 @@ export default function DetailedDayForecast() {
 
     const validUv = hourlyData
       .map((hour) => Number(hour.uvIndex))
+      .filter((value) => !Number.isNaN(value));
+
+    const validAirQuality = hourlyData
+      .map((hour) => Number(hour.airQuality))
       .filter((value) => !Number.isNaN(value));
 
     const validHumidity = hourlyData
@@ -194,6 +212,10 @@ export default function DetailedDayForecast() {
       0
     );
 
+    const maxAirQuality =
+      validAirQuality.length > 0 ? Math.max(...validAirQuality) : null;
+    const aqInfo = getAirQualityDescription(maxAirQuality);
+
     return {
       totalRain,
 
@@ -206,6 +228,12 @@ export default function DetailedDayForecast() {
         validUv.length > 0
           ? Math.max(...validUv)
           : null,
+
+      maxAirQuality: {
+        value: maxAirQuality,
+        label: aqInfo.label,
+        color: aqInfo.color,
+      },
 
       avgHumidity:
         validHumidity.length > 0
@@ -324,7 +352,7 @@ export default function DetailedDayForecast() {
         </section>
 
         {/* DAILY SUMMARY */}
-        <section className="mb-8 grid grid-cols-2 gap-3 md:grid-cols-6">
+        <section className="mb-8 grid grid-cols-2 gap-3 md:grid-cols-4 lg:grid-cols-7">
           <StatCard
             icon={CloudRain}
             label="Rain"
@@ -354,10 +382,18 @@ export default function DetailedDayForecast() {
           />
 
           <StatCard
+            icon={Activity}
+            label="Air Quality"
+            value={dailyStats.maxAirQuality?.value != null ? `${formatNumber(dailyStats.maxAirQuality.value)} / 100` : '—'}
+            subValue={'Peak AQI'}
+            iconClass={dailyStats.maxAirQuality?.color || 'text-slate-400'}
+          />
+
+          <StatCard
             icon={Droplet}
             label="Humidity"
             value={`${formatNumber(dailyStats.avgHumidity)}%`}
-            subValue="Hourly average"
+            subValue="Daily average"
             iconClass="text-sky-400"
           />
 
@@ -365,7 +401,7 @@ export default function DetailedDayForecast() {
             icon={Cloud}
             label="Cloud cover"
             value={`${formatNumber(dailyStats.avgCloudiness)}%`}
-            subValue="Hourly average"
+            subValue="Daily average"
             iconClass="text-slate-300"
           />
 
@@ -373,7 +409,7 @@ export default function DetailedDayForecast() {
             icon={Gauge}
             label="Pressure"
             value={`${formatNumber(dailyStats.avgPressure, 0)} hPa`}
-            subValue="Hourly average"
+            subValue="Daily average"
             iconClass="text-violet-400"
           />
         </section>
@@ -426,7 +462,7 @@ export default function DetailedDayForecast() {
                 Temp
               </span>
 
-              <div className="grid grid-cols-7 gap-3">
+              <div className="grid grid-cols-8 gap-3">
                 <span className="text-[10px] font-bold uppercase tracking-widest text-slate-600">
                   Rain
                 </span>
@@ -437,6 +473,10 @@ export default function DetailedDayForecast() {
 
                 <span className="text-[10px] font-bold uppercase tracking-widest text-slate-600">
                   UV Index
+                </span>
+
+                <span className="text-[10px] font-bold uppercase tracking-widest text-slate-600">
+                  Air Quality
                 </span>
                 
                 <span className="text-[10px] font-bold uppercase tracking-widest text-slate-600">
@@ -478,6 +518,13 @@ export default function DetailedDayForecast() {
                   hour.uvIndex != null
                     ? Number(hour.uvIndex)
                     : null;
+
+                const airQuality =
+                  hour.airQuality != null
+                    ? Number(hour.airQuality)
+                    : null;
+
+                const aqInfo = getAirQualityDescription(airQuality);
 
                 const humidity =
                   hour.humidityPercent != null
@@ -537,7 +584,7 @@ export default function DetailedDayForecast() {
                       </div>
 
                       {/* Metrics */}
-                      <div className="grid grid-cols-7 gap-3">
+                      <div className="grid grid-cols-8 gap-3">
 
                         <HourlyMetric
                           icon={Droplet}
@@ -572,6 +619,17 @@ export default function DetailedDayForecast() {
                               : '—'
                           }
                           iconClass={getUvColorClass(uvIndex)}
+                        />
+
+                        <HourlyMetric
+                          icon={Activity}
+                          label="Air Quality"
+                          value={
+                            airQuality != null
+                              ? Math.round(airQuality)
+                              : '—'
+                          }
+                          iconClass={aqInfo.color}
                         />
 
                         <HourlyMetric
@@ -695,6 +753,17 @@ export default function DetailedDayForecast() {
                               : '—'
                           }
                           iconClass={getUvColorClass(uvIndex)}
+                        />
+
+                        <HourlyMetric
+                          icon={Activity}
+                          label="Air Quality"
+                          value={
+                            airQuality != null
+                              ? Math.round(airQuality)
+                              : '—'
+                          }
+                          iconClass={aqInfo.color}
                         />
 
                         <HourlyMetric

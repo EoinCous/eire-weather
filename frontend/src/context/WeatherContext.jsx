@@ -9,7 +9,7 @@ import {
 const WeatherContext = createContext(null);
 
 const BASE_URL =
-  import.meta.env.VITE_API_BASE_URL ||
+  import.meta.env.VITE_LOCAL_API_BASE_URL ||
   'http://ec2-54-78-124-210.eu-west-1.compute.amazonaws.com:8080/api/v1/weather';
 
 const SAVED_LOCATION_KEY = 'eireweather-location';

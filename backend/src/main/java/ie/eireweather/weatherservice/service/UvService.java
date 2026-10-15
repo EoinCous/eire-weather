@@ -9,7 +9,7 @@ import java.util.Map;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestClient;
 
-import ie.eireweather.weatherservice.dto.OpenMeteoResponse;
+import ie.eireweather.weatherservice.dto.openmeteo.UvResponse;
 
 @Service
 public class UvService {
@@ -22,10 +22,10 @@ public class UvService {
 
     public Map<Instant, Double> getHourlyUvForecast(double lat, double lon) {
         try {
-            OpenMeteoResponse response = restClient.get()
+            UvResponse response = restClient.get()
                 .uri("/v1/forecast?latitude={lat}&longitude={lon}&hourly=uv_index&forecast_days=10&timezone=auto", lat, lon)
                 .retrieve()
-                .body(OpenMeteoResponse.class);
+                .body(UvResponse.class);
 
             if (response != null && response.hourly() != null 
                     && response.hourly().time() != null 

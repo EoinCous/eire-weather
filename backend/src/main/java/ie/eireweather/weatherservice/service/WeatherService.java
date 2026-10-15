@@ -18,18 +18,19 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.TreeMap;
+import java.util.concurrent.CompletableFuture;
 
 @Service
 public class WeatherService {
 
     private final RestClient restClient;
-    private final UvService uvService;
+    private final OpenMeteoService openMeteoService;
 
     private static final String MET_EIREANN_API_URL = "http://openaccess.pf.api.met.ie/metno-wdb2ts/locationforecast?lat=%.4f;long=%.4f";
     private static final String USER_AGENT_VALUE = "EireWeatherApp/1.0";
 
-    public WeatherService(UvService uvService) {
-        this.uvService = uvService;
+    public WeatherService(OpenMeteoService openMeteoService) {
+        this.openMeteoService = openMeteoService;
         this.restClient = RestClient.builder()
             .requestFactory(new HttpComponentsClientHttpRequestFactory())
             .defaultHeader(HttpHeaders.USER_AGENT, USER_AGENT_VALUE)
@@ -49,17 +50,34 @@ public class WeatherService {
         
         String rawUrl = String.format(Locale.US, MET_EIREANN_API_URL, lat, lon);
 
-        MetEireannResponseDto raw = restClient.get()
-            .uri(URI.create(rawUrl))
-            .retrieve()
-            .body(MetEireannResponseDto.class);
+        // Fetch Met Éireann and Open-Meteo data concurrently in parallel
+        CompletableFuture<MetEireannResponseDto> metEireannFuture = CompletableFuture.supplyAsync(() -> 
+            restClient.get()
+                .uri(URI.create(rawUrl))
+                .retrieve()
+                .body(MetEireannResponseDto.class)
+        );
 
-        Map<Instant, Double> uvMap = uvService.getHourlyUvForecast(lat, lon);
+        CompletableFuture<OpenMeteoService.OpenMeteoData> openMeteoFuture = 
+            openMeteoService.getOpenMeteoDataAsync(lat, lon);
 
-        return mapToWeatherResponse(raw, lat, lon, uvMap);
+        // Wait for both futures to complete and map the final response
+        return CompletableFuture.allOf(metEireannFuture, openMeteoFuture)
+            .thenApply(v -> {
+                MetEireannResponseDto raw = metEireannFuture.join();
+                OpenMeteoService.OpenMeteoData openMeteoData = openMeteoFuture.join();
+
+                return mapToWeatherResponse(raw, lat, lon, openMeteoData.uvMap(), openMeteoData.airQualityMap());
+            }).join();
     }
 
-    private WeatherResponse mapToWeatherResponse(MetEireannResponseDto raw, double lat, double lon, Map<Instant, Double> uvMap) {
+    private WeatherResponse mapToWeatherResponse(
+        MetEireannResponseDto raw, 
+        double lat, 
+        double lon, 
+        Map<Instant, Double> uvMap, 
+        Map<Instant, Double> airQualityMap
+    ) {
         if (raw == null || raw.product() == null || raw.product().timeEntries() == null) {
             return new WeatherResponse(lat, lon, null, List.of());
         }
@@ -90,10 +108,10 @@ public class WeatherService {
 
         List<HourlyForecast> hourlyList = new ArrayList<>();
 
-        // Match each Met Éireann forecast timestamp to its exact Open-Meteo UV value
         for (HourlyBuilder builder : forecastMap.values()) {
             Double uv = uvMap.getOrDefault(builder.timestamp, 0.0);
-            hourlyList.add(builder.build(uv));
+            Double airQuality = airQualityMap.getOrDefault(builder.timestamp, 0.0);
+            hourlyList.add(builder.build(uv, airQuality));
         }
 
         HourlyForecast current = hourlyList.isEmpty() ? null : hourlyList.get(0);
@@ -117,10 +135,10 @@ public class WeatherService {
             this.timestamp = timestamp;
         }
 
-        HourlyForecast build(Double uvIndex) {
+        HourlyForecast build(Double uvIndex, Double airQuality) {
             return new HourlyForecast(
                 timestamp, cloudiness, dewpointTemperature, temperature, precipitationMm, weatherSymbol,
-                windSpeedMps, windDirection, humidityPercent, pressureHpa, uvIndex
+                windSpeedMps, windDirection, humidityPercent, pressureHpa, uvIndex, airQuality
             );
         }
     }

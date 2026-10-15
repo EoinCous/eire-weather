@@ -8,6 +8,11 @@ jobs:
   build-and-deploy:
     runs-on: self-hosted
 
+    # Only run this job if files inside the backend folder changed!
+    paths:
+      - 'backend/**'
+      - '.github/workflows/maven.yml'
+
     steps:
       # 1. Checkout repository code directly on EC2
       - name: Checkout Code

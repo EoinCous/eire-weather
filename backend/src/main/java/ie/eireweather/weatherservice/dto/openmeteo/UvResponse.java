@@ -1,10 +1,10 @@
-package ie.eireweather.weatherservice.dto;
+package ie.eireweather.weatherservice.dto.openmeteo;
 
 import java.util.List;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 
-public record OpenMeteoResponse(
+public record UvResponse(
     @JsonProperty("latitude") double latitude,
     @JsonProperty("longitude") double longitude,
     @JsonProperty("hourly") HourlyUnits hourly
