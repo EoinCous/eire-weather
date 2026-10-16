@@ -60,5 +60,3 @@ build/
 *.txt
 
 .env
-
-backend/src/main/resources/application.properties
