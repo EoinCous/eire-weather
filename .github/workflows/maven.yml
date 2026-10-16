@@ -3,7 +3,6 @@ name: Build and Deploy Spring Boot to AWS EC2
 on:
   push:
     branches: [ "main" ]
-    # Only run this job if files inside the backend folder changed!
     paths:
       - 'backend/**'
       - '.github/workflows/maven.yml'
@@ -20,10 +19,20 @@ jobs:
         run: docker build -t eireweather-backend -f backend/Dockerfile backend
 
       - name: Restart Docker Container
+        env:
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
         run: |
-          # Stop and remove old container if it exists
+          # 1. Stop and remove old container if running
           docker stop weather-app || true
           docker rm weather-app || true
-          
-          # Run the new container in detached mode
-          docker run -d -p 8080:8080 --name weather-app --restart always eireweather-backend
+
+          # 2. Run the new container with injected environment variables
+          docker run -d \
+            -p 8080:8080 \
+            -e OPENAI_API_KEY="$OPENAI_API_KEY" \
+            --name weather-app \
+            --restart always \
+            eireweather-backend
+
+          # 3. Clean up dangling images to keep EC2 disk space clean
+          docker image prune -f

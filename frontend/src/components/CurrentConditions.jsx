@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import {
   Wind,
   Droplet,
@@ -6,10 +7,16 @@ import {
   CloudRain,
   Cloud,
   Sun,
-  Activity
+  Activity,
+  Sparkles,
+  Loader2,
+  RefreshCw,
+  AlertCircle
 } from 'lucide-react';
 
 import { WeatherIcon } from './WeatherIcon';
+import { useWeather } from '../context/WeatherContext';
+import MetricCard from './MetricCard';
 
 function formatValue(value, suffix = '') {
   if (value == null || Number.isNaN(Number(value))) {
@@ -116,50 +123,27 @@ function getWindDescription(speed) {
   return 'Strong Wind';
 }
 
-function MetricCard({
-  label,
-  value,
-  subValue,
-  subValueColor = 'text-slate-500',
-  icon: Icon,
-  iconClass = 'text-blue-400',
-}) {
-  return (
-    <div className="group rounded-2xl border border-slate-800/70 bg-slate-950/40 p-4 transition-all duration-300 hover:-translate-y-0.5 hover:border-slate-700 hover:bg-slate-900/60">
-      <div className="mb-4 flex items-start justify-between gap-3">
-        <span className="text-[10px] font-bold uppercase tracking-[0.16em] text-slate-500">
-          {label}
-        </span>
-
-        <div
-          className={`
-            flex h-8 w-8 shrink-0 items-center justify-center
-            rounded-xl border border-slate-800
-            bg-slate-900/80
-            ${iconClass}
-            transition-all duration-300
-            group-hover:border-slate-700
-          `}
-        >
-          <Icon className="h-4 w-4" />
-        </div>
-      </div>
-
-      <div>
-        <p className="text-xl font-extrabold tracking-tight text-slate-100 md:text-2xl">
-          {value}
-        </p>
-
-        <p className={`mt-1.5 text-[11px] font-medium leading-tight ${subValueColor}`}>
-          {subValue}
-        </p>
-      </div>
-    </div>
-  );
-}
-
 export default function CurrentConditions({ current }) {
+  const [aiSummary, setAiSummary] = useState(null);
+  const [loadingAi, setLoadingAi] = useState(false);
+  const [aiError, setAiError] = useState(null);
+  const { fetchAiSummary } = useWeather();
+
   if (!current) return null;
+
+  const handleFetchAiSummary = async () => {
+    setLoadingAi(true);
+    setAiError(null);
+
+    try {
+      const summary = await fetchAiSummary('CURRENT');
+      setAiSummary(summary);
+    } catch (err) {
+      setAiError(err.message || 'Unable to generate summary.');
+    } finally {
+      setLoadingAi(false);
+    }
+  };
 
   const temperature =
     current.temperatureC != null ? Number(current.temperatureC) : null;
@@ -211,7 +195,7 @@ export default function CurrentConditions({ current }) {
       <div className="relative z-10 flex items-center justify-between gap-4 lg:flex-row lg:items-center">
         {/* Temperature / Condition */}
         <div className="min-w-0 flex-1">
-          <div className="mb- inline-flex items-center gap-2 rounded-full border border-emerald-500/20 bg-emerald-500/[0.06] px-3 py-1.5">
+          <div className="mb-3 inline-flex items-center gap-2 rounded-full border border-emerald-500/20 bg-emerald-500/[0.06] px-3 py-1.5">
             <span className="relative flex h-2 w-2">
               <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-40" />
               <span className="relative inline-flex h-2 w-2 rounded-full bg-emerald-400" />
@@ -328,6 +312,66 @@ export default function CurrentConditions({ current }) {
           icon={Sun}
           iconClass={uvInfo.iconColor}
         />
+      </div>
+
+      {/* AI SUMMARY CARD */}
+      <div className="relative z-10 mt-6 rounded-2xl border border-blue-500/20 bg-slate-950/60 p-4 transition-all duration-300 md:p-5">
+        <div className="flex items-center justify-between gap-3">
+          <div className="flex items-center gap-2">
+            <div className="flex h-7 w-7 items-center justify-center rounded-lg border border-blue-400/30 bg-blue-500/10 text-blue-400">
+              <Sparkles className="h-4 w-4" />
+            </div>
+            <span className="text-xs font-bold uppercase tracking-[0.16em] text-blue-300">
+              AI Summary
+            </span>
+          </div>
+
+          {!aiSummary && (
+            <button
+              onClick={handleFetchAiSummary}
+              disabled={loadingAi}
+              className="inline-flex items-center gap-2 rounded-xl border border-blue-500/30 bg-blue-600/20 px-3.5 py-1.5 text-xs font-semibold text-blue-200 transition-all duration-200 hover:border-blue-400 hover:bg-blue-600/30 hover:text-white disabled:opacity-50"
+            >
+              {loadingAi ? (
+                <>
+                  <Loader2 className="h-3.5 w-3.5 animate-spin text-blue-300" />
+                  <span>Synthesizing...</span>
+                </>
+              ) : (
+                <>
+                  <Sparkles className="h-3.5 w-3.5 text-blue-400" />
+                  <span>Generate Summary</span>
+                </>
+              )}
+            </button>
+          )}
+
+          {aiSummary && (
+            <button
+              onClick={handleFetchAiSummary}
+              disabled={loadingAi}
+              title="Regenerate Summary"
+              className="flex h-8 w-8 items-center justify-center rounded-lg border border-slate-800 bg-slate-900/80 text-slate-400 transition-colors hover:border-slate-700 hover:text-slate-200 disabled:opacity-50"
+            >
+              <RefreshCw className={`h-3.5 w-3.5 ${loadingAi ? 'animate-spin' : ''}`} />
+            </button>
+          )}
+        </div>
+
+        {/* Display Summary Content */}
+        {aiSummary && (
+          <p className="mt-3 text-sm leading-relaxed text-slate-200 animate-fadeIn">
+            {aiSummary}
+          </p>
+        )}
+
+        {/* Display Error Message */}
+        {aiError && (
+          <div className="mt-3 flex items-center gap-2 text-xs text-rose-400">
+            <AlertCircle className="h-4 w-4 shrink-0" />
+            <span>{aiError}</span>
+          </div>
+        )}
       </div>
     </section>
   );

@@ -549,6 +549,32 @@ export function WeatherProvider({ children }) {
     }
   };
 
+  /**
+   * Generalized AI summary fetcher supporting CURRENT, SINGLE_DAY, and TEN_DAY scopes.
+   * 
+   * @param {string} scope 'CURRENT' | 'SINGLE_DAY' | 'TEN_DAY'
+   * @param {string|null} date Optional date string 'YYYY-MM-DD' for SINGLE_DAY scope
+   */
+  const fetchAiSummary = async (scope = 'CURRENT', date = null) => {
+    if (coords?.lat == null || coords?.lon == null) {
+      throw new Error('Location coordinates are missing.');
+    }
+
+    let url = `/api/ai/summary?lat=${coords.lat}&lon=${coords.lon}&scope=${scope}`;
+    if (date) {
+      url += `&date=${encodeURIComponent(date)}`;
+    }
+
+    const response = await fetch(url);
+
+    if (!response.ok) {
+      throw new Error('Unable to generate AI summary at this moment.');
+    }
+
+    const data = await response.json();
+    return data.summary;
+  };
+
   return (
     <WeatherContext.Provider
       value={{
@@ -560,6 +586,7 @@ export function WeatherProvider({ children }) {
         error,
         requestLocation,
         searchLocation,
+        fetchAiSummary
       }}
     >
       {children}
