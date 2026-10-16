@@ -1,4 +1,4 @@
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 
 import {
@@ -12,6 +12,10 @@ import {
   Thermometer,
   Sun,
   Activity,
+  Sparkles,
+  Loader2,
+  RefreshCw,
+  AlertCircle
 } from 'lucide-react';
 
 import { WeatherIcon } from '../components/WeatherIcon';
@@ -156,12 +160,33 @@ export default function DetailedDayForecast() {
   const location = useLocation();
   const navigate = useNavigate();
 
-  const { coords } = useWeather();
+  const { coords, fetchAiSummary } = useWeather();
+
+  const [aiSummary, setAiSummary] = useState(null);
+  const [loadingAi, setLoadingAi] = useState(false);
+  const [aiError, setAiError] = useState(null);
 
   const {
     daySummary,
     hourlyData,
   } = location.state || {};
+
+  const handleFetchAiSummary = async () => {
+    if (!daySummary?.dateKey) return;
+
+    setLoadingAi(true);
+    setAiError(null);
+
+    try {
+      // Call fetchAiSummary with SINGLE_DAY scope and target date
+      const summary = await fetchAiSummary('SINGLE_DAY', daySummary.dateKey);
+      setAiSummary(summary);
+    } catch (err) {
+      setAiError(err.message || 'Unable to generate day summary.');
+    } finally {
+      setLoadingAi(false);
+    }
+  };
 
   /*
    * Calculate useful daily aggregates from the hourly data.
@@ -302,11 +327,43 @@ export default function DetailedDayForecast() {
         >
           <div className="pointer-events-none absolute -right-24 -top-24 h-72 w-72 rounded-full bg-blue-500/10 blur-3xl" />
 
-          <div className="relative z-10 flex items-center justify-between gap-4">
+          <div className="relative z-10 flex items-center justify-between gap-4 flex-wrap sm:flex-nowrap">
             <div className="min-w-0 flex-1">
-              <p className="mb-2 text-[11px] font-bold uppercase tracking-[0.18em] text-blue-400">
-                Daily Forecast
-              </p>
+              <div className="flex items-center justify-between mb-2">
+                <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-blue-400">
+                  Daily Forecast
+                </p>
+
+                {/* AI Button inside Hero */}
+                {!aiSummary ? (
+                  <button
+                    onClick={handleFetchAiSummary}
+                    disabled={loadingAi}
+                    className="inline-flex items-center gap-1.5 rounded-xl border border-blue-500/30 bg-blue-600/20 px-3 py-1 text-xs font-semibold text-blue-200 transition-all duration-200 hover:border-blue-400 hover:bg-blue-600/30 hover:text-white disabled:opacity-50"
+                  >
+                    {loadingAi ? (
+                      <>
+                        <Loader2 className="h-3.5 w-3.5 animate-spin text-blue-300" />
+                        <span>Synthesizing...</span>
+                      </>
+                    ) : (
+                      <>
+                        <Sparkles className="h-3.5 w-3.5 text-blue-400" />
+                        <span>AI Summary</span>
+                      </>
+                    )}
+                  </button>
+                ) : (
+                  <button
+                    onClick={handleFetchAiSummary}
+                    disabled={loadingAi}
+                    title="Regenerate Summary"
+                    className="flex h-7 w-7 items-center justify-center rounded-lg border border-slate-800 bg-slate-900/80 text-slate-400 transition-colors hover:border-slate-700 hover:text-slate-200 disabled:opacity-50"
+                  >
+                    <RefreshCw className={`h-3 w-3 ${loadingAi ? 'animate-spin' : ''}`} />
+                  </button>
+                )}
+              </div>
 
               <h1 className="text-3xl font-black tracking-tight text-white sm:text-4xl md:text-5xl">
                 {daySummary.dayName}
@@ -357,6 +414,29 @@ export default function DetailedDayForecast() {
             </div>
           </div>
         </section>
+
+        {/* AI SUMMARY DISPLAY CARD */}
+        {aiSummary && (
+          <div className="mb-8 rounded-2xl border border-blue-500/20 bg-slate-900/40 p-5 shadow-xl backdrop-blur-xl animate-fadeIn">
+            <div className="flex items-center gap-2 mb-2">
+              <Sparkles className="h-4 w-4 text-blue-400" />
+              <span className="text-xs font-bold uppercase tracking-[0.16em] text-blue-300">
+                Daily Breakdown
+              </span>
+            </div>
+            <p className="text-sm leading-relaxed text-slate-200">
+              {aiSummary}
+            </p>
+          </div>
+        )}
+
+        {/* ERROR MESSAGE DISPLAY */}
+        {aiError && (
+          <div className="mb-8 flex items-center gap-2 text-xs text-rose-400">
+            <AlertCircle className="h-4 w-4 shrink-0" />
+            <span>{aiError}</span>
+          </div>
+        )}
 
         {/* DAILY SUMMARY */}
         <section className="mb-8 grid grid-cols-2 gap-3 md:grid-cols-4 lg:grid-cols-7">

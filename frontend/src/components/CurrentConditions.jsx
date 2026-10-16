@@ -314,65 +314,57 @@ export default function CurrentConditions({ current }) {
         />
       </div>
 
-      {/* AI SUMMARY CARD */}
-      <div className="relative z-10 mt-6 rounded-2xl border border-blue-500/20 bg-slate-950/60 p-4 transition-all duration-300 md:p-5">
-        <div className="flex items-center justify-between gap-3">
-          <div className="flex items-center gap-2">
-            <div className="flex h-7 w-7 items-center justify-center rounded-lg border border-blue-400/30 bg-blue-500/10 text-blue-400">
-              <Sparkles className="h-4 w-4" />
-            </div>
+      {/* CENTER BOTTOM AI SUMMARY BUTTON */}
+      {!aiSummary && (
+        <div className="relative z-10 mt-6 flex justify-center">
+          <button
+            onClick={handleFetchAiSummary}
+            disabled={loadingAi}
+            className="inline-flex items-center gap-2 rounded-xl border border-blue-500/30 bg-blue-600/20 px-5 py-2.5 text-xs font-semibold text-blue-200 transition-all duration-200 hover:border-blue-400 hover:bg-blue-600/30 hover:text-white disabled:opacity-50"
+          >
+            {loadingAi ? (
+              <>
+                <Loader2 className="h-4 w-4 animate-spin text-blue-300" />
+                <span>Synthesizing...</span>
+              </>
+            ) : aiSummary ? (
+              <>
+                <RefreshCw className="h-4 w-4 text-blue-400" />
+                <span>Regenerate Summary</span>
+              </>
+            ) : (
+              <>
+                <Sparkles className="h-4 w-4 text-blue-400" />
+                <span>Generate Summary</span>
+              </>
+            )}
+          </button>
+        </div>
+      )}
+      
+
+      {/* AI SUMMARY DISPLAY CARD */}
+      {aiSummary && (
+        <div className="relative z-10 mt-6 rounded-2xl border border-blue-500/20 bg-slate-950/60 p-4 transition-all duration-300 md:p-5 animate-fadeIn">
+          <div className="flex items-center gap-2 mb-2">
+            <Sparkles className="h-4 w-4 text-blue-400" />
             <span className="text-xs font-bold uppercase tracking-[0.16em] text-blue-300">
               AI Summary
             </span>
           </div>
-
-          {!aiSummary && (
-            <button
-              onClick={handleFetchAiSummary}
-              disabled={loadingAi}
-              className="inline-flex items-center gap-2 rounded-xl border border-blue-500/30 bg-blue-600/20 px-3.5 py-1.5 text-xs font-semibold text-blue-200 transition-all duration-200 hover:border-blue-400 hover:bg-blue-600/30 hover:text-white disabled:opacity-50"
-            >
-              {loadingAi ? (
-                <>
-                  <Loader2 className="h-3.5 w-3.5 animate-spin text-blue-300" />
-                  <span>Synthesizing...</span>
-                </>
-              ) : (
-                <>
-                  <Sparkles className="h-3.5 w-3.5 text-blue-400" />
-                  <span>Generate Summary</span>
-                </>
-              )}
-            </button>
-          )}
-
-          {aiSummary && (
-            <button
-              onClick={handleFetchAiSummary}
-              disabled={loadingAi}
-              title="Regenerate Summary"
-              className="flex h-8 w-8 items-center justify-center rounded-lg border border-slate-800 bg-slate-900/80 text-slate-400 transition-colors hover:border-slate-700 hover:text-slate-200 disabled:opacity-50"
-            >
-              <RefreshCw className={`h-3.5 w-3.5 ${loadingAi ? 'animate-spin' : ''}`} />
-            </button>
-          )}
-        </div>
-
-        {/* Display Summary Content */}
-        {aiSummary && (
-          <p className="mt-3 text-sm leading-relaxed text-slate-200 animate-fadeIn">
+          <p className="text-sm leading-relaxed text-slate-200">
             {aiSummary}
           </p>
-        )}
+        </div>
+      )}
 
-        {/* Display Error Message */}
-        {aiError && (
-          <div className="mt-3 flex items-center gap-2 text-xs text-rose-400">
-            <AlertCircle className="h-4 w-4 shrink-0" />
-            <span>{aiError}</span>
-          </div>
-        )}
-      </div>
+      {/* ERROR MESSAGE DISPLAY */}
+      {aiError && (
+        <div className="relative z-10 mt-4 flex items-center gap-2 text-xs text-rose-400">
+          <AlertCircle className="h-4 w-4 shrink-0" />
+          <span>{aiError}</span>
+        </div>
+      )}
     </section>
   );
 }
