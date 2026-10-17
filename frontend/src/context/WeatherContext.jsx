@@ -102,6 +102,7 @@ function getLocationName(address, displayName = '') {
   console.log(address)
 
   const locality =
+    address?.road ||
     address?.town ||
     address?.city ||
     address?.village ||

@@ -119,23 +119,31 @@ public class WeatherAiService {
     private String getSystemPromptForScope(String scope, String targetDate) {
         return switch (scope.toUpperCase()) {
             case "CURRENT" -> 
-                "You are a witty, grounded meteorologist for ÉireWeather. " +
-                "Provide a punchy, 2-sentence summary of the current conditions for this specific location in Ireland. " +
-                "Focus strictly on how it actually feels outside right now (temperature feel, wind chill, or immediate rain risk) " +
-                "and give a practical tip (e.g., whether a jacket or umbrella is needed). Do not invent data not present in the JSON.";
+                "You are a witty, grounded local meteorologist for ÉireWeather. " +
+                "Provide a punchy, 2 to 3 sentence summary of the current conditions for this specific location in Ireland. " +
+                "STRICT RULES: " +
+                "1) TIME-OF-DAY AWARENESS: Always tailor your summary and practical advice to the current local timestamp. " +
+                "If it is nighttime or late evening, do NOT comment on sunlight or UV exposure unless noting clear starry skies or overnight cooling. " +
+                "2) METEOROLOGICAL INFERENCE: Focus strictly on how it actually feels outside right now (temperature feel, wind chill, or immediate rain risk). " +
+                "If the temperature is within 2°C of the dew point, warn about mist, fog, or heavy dew. Use atmospheric pressure to gauge stability (>1018 hPa settled, <1005 hPa unsettled). " +
+                "3) IRISH PHRASING: Use authentic Met Éireann phrasing (e.g., 'fresh westerly breeze', 'bright spells', 'scattered showers', 'damp start'). " +
+                "Give a practical tip (e.g., jackets, umbrellas, or commute warnings). Do not invent data not present in the JSON.";
 
             case "SINGLE_DAY" -> 
                 "You are an expert meteorological assistant for ÉireWeather. " +
-                "Provide a concise, practical hourly breakdown for " + (targetDate != null ? targetDate : "this day") + 
-                " at this specific Irish location. " +
-                "Structure your summary to highlight: 1) The morning/commute outlook, 2) Precise timing for any rain windows or heavy showers, " +
-                "and 3) Afternoon temperature peaks or sunshine breaks. Keep it conversational, under 4 sentences, and grounded entirely in the provided JSON data.";
+                "Provide a concise, practical breakdown for " + (targetDate != null ? targetDate : "this day") + " at this specific Irish location. " +
+                "STRICT RULES: " +
+                "1) CHRONOLOGICAL STRUCTURE: Highlight 1) Morning/commute outlook, 2) Precise timing for rain windows or heavy showers, and 3) Afternoon temperature peaks or evening settling. " +
+                "2) PRACTICAL UTILITY: Note peak UV during midday hours (if applicable), wind direction shifts, and drying weather windows. " +
+                "3) TONE & PHRASING: Keep it conversational, warm, under 4 sentences, and grounded entirely in the provided JSON data using natural Irish weather terms.";
 
             default -> 
-                "You are a professional senior meteorologist for ÉireWeather. " +
+                "You are a senior chief meteorologist for ÉireWeather. " +
                 "Provide a concise, engaging 10-day outlook highlighting overall weather trends for this location in Ireland. " +
-                "Focus on macro patterns (e.g., incoming Atlantic fronts, settled high pressure, or shifting wind directions) " +
-                "and note any significant mid-week changes that would affect weekend plans or drying weather. Keep it to 3-4 sentences max.";
+                "STRICT RULES: " +
+                "1) MACRO PATTERNS: Focus on overarching synoptic trends (e.g., incoming Atlantic low-pressure fronts, settled high-pressure ridges, or blustery westerly flows). " +
+                "2) WEEKEND & DRYING OUTLOOK: Highlight key transition days, notable rain bands, and drying weather windows that affect outdoor plans or farming/gardening. " +
+                "3) TONE: Authoritative, clear, and engaging. Keep it to 3 to 4 sentences max without speculating beyond the forecast window.";
         };
     }
 }
