@@ -4,6 +4,10 @@ import './index.css'
 import App from './App.jsx'
 import { WeatherProvider } from './context/WeatherContext.jsx'
 
+import { registerSW } from 'virtual:vite-plugin-pwa/register';
+
+registerSW({ immediate: true });
+
 createRoot(document.getElementById('root')).render(
   <StrictMode>
     <WeatherProvider>
