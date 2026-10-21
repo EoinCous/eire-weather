@@ -1,8 +1,10 @@
 import { useEffect, useRef, useState } from 'react';
 import L from 'leaflet';
-import { Play, Pause, RotateCcw } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import { ArrowLeft, Play, Pause, RotateCcw } from 'lucide-react';
 
 export default function PrecipitationRadar() {
+  const navigate = useNavigate();
   const mapRef = useRef(null);
   const mapInstanceRef = useRef(null);
   const radarLayersRef = useRef({});
@@ -12,7 +14,7 @@ export default function PrecipitationRadar() {
   const [isPlaying, setIsPlaying] = useState(false);
   const [loading, setLoading] = useState(true);
 
-  // 1. Initialize Leaflet Map
+  // 1. Initialize Fullscreen Map & Load RainViewer Frames
   useEffect(() => {
     if (!mapInstanceRef.current) {
       const irelandBounds = L.latLngBounds(
@@ -25,7 +27,7 @@ export default function PrecipitationRadar() {
         attributionControl: false,
         maxBounds: irelandBounds,
         maxBoundsViscosity: 0.8,
-      }).setView([53.4129, -8.2439], 6);
+      }).setView([53.4129, -8.2439], 7);
 
       L.tileLayer('https://tiles.stadiamaps.com/tiles/alidade_smooth_dark/{z}/{x}/{y}{r}.png', {
         maxZoom: 12,
@@ -34,7 +36,6 @@ export default function PrecipitationRadar() {
       }).addTo(mapInstanceRef.current);
     }
 
-    // 2. Fetch RainViewer Frames
     async function loadRadarFrames() {
       try {
         const response = await fetch('https://api.rainviewer.com/public/weather-maps.json');
@@ -44,6 +45,14 @@ export default function PrecipitationRadar() {
           const host = data.host;
           // Take the last 8 frames (~2 hours of history)
           const pastFrames = data.radar.past.slice(-8);
+
+          // Clear out any existing radar layers to prevent ghosting/stacking
+          Object.values(radarLayersRef.current).forEach((layer) => {
+            if (mapInstanceRef.current) {
+              mapInstanceRef.current.removeLayer(layer);
+            }
+          });
+          radarLayersRef.current = {};
 
           // Pre-create tile layers using each frame's *own* unique path
           pastFrames.forEach((frame) => {
@@ -72,6 +81,14 @@ export default function PrecipitationRadar() {
     loadRadarFrames();
 
     return () => {
+      // Cleanup layers and map on unmount
+      Object.values(radarLayersRef.current).forEach((layer) => {
+        if (mapInstanceRef.current) {
+          mapInstanceRef.current.removeLayer(layer);
+        }
+      });
+      radarLayersRef.current = {};
+
       if (mapInstanceRef.current) {
         mapInstanceRef.current.remove();
         mapInstanceRef.current = null;
@@ -79,7 +96,7 @@ export default function PrecipitationRadar() {
     };
   }, []);
 
-  // 3. Handle Active Frame Visibility (Only show opacity for the current index)
+  // 2. Handle Active Frame Visibility (Only show opacity for the current index)
   useEffect(() => {
     if (frames.length === 0) return;
 
@@ -91,7 +108,7 @@ export default function PrecipitationRadar() {
     });
   }, [currentIndex, frames]);
 
-  // 4. Playback Timer Loop
+  // 3. Playback Timer Loop
   useEffect(() => {
     let interval = null;
     if (isPlaying && frames.length > 0) {
@@ -117,36 +134,45 @@ export default function PrecipitationRadar() {
   const activeTime = frames[currentIndex] ? formatTime(frames[currentIndex].time) : '';
 
   return (
-    <div className="bg-slate-900/60 border border-slate-800 rounded-2xl p-4 shadow-xl backdrop-blur-md">
-      <div className="flex items-center justify-between mb-3">
-        <h3 className="text-sm font-semibold text-slate-200 tracking-wide uppercase">
-          Precipitation Radar
-        </h3>
-        {activeTime && (
+    <div className="fixed inset-0 z-50 w-full h-[100dvh] bg-slate-950 overflow-hidden">
+      {/* Floating Header */}
+      <div className="absolute top-4 left-4 right-4 z-[1000] flex items-center justify-between bg-slate-900/90 border border-slate-800 rounded-2xl px-4 py-3 shadow-2xl backdrop-blur-md">
+        <button
+          onClick={() => navigate(-1)}
+          className="flex items-center gap-2 text-sm text-slate-300 hover:text-white transition-colors"
+        >
+          <ArrowLeft size={18} />
+          <span>Back</span>
+        </button>
+
+        <h2 className="text-sm font-semibold text-slate-200 tracking-wide uppercase">
+          Live Radar Timeline
+        </h2>
+
+        {activeTime ? (
           <span className="text-xs bg-slate-800 text-cyan-400 px-2.5 py-1 rounded-full font-medium">
             {activeTime} {currentIndex === frames.length - 1 && !isPlaying ? '(Latest)' : ''}
           </span>
+        ) : (
+          <div className="w-12" />
         )}
       </div>
 
-      {/* Map Container */}
-      <div 
-        ref={mapRef} 
-        className="w-full h-72 rounded-xl overflow-hidden border border-slate-800/80 relative z-10"
-      >
-        {loading && (
-          <div className="absolute inset-0 bg-slate-950/80 flex items-center justify-center z-20 text-slate-400 text-sm">
-            Loading radar map...
-          </div>
-        )}
-      </div>
+      {/* Fullscreen Map Canvas */}
+      <div ref={mapRef} className="w-full h-full" />
 
-      {/* Animation Controls */}
+      {loading && (
+        <div className="absolute inset-0 bg-slate-950/80 flex items-center justify-center z-[2000] text-slate-400 text-sm">
+          Loading radar map...
+        </div>
+      )}
+
+      {/* Floating Bottom Animation Scrubber Bar */}
       {!loading && frames.length > 0 && (
-        <div className="mt-3 flex items-center gap-3 bg-slate-950/60 border border-slate-800/60 rounded-xl p-2.5">
+        <div className="absolute bottom-6 left-4 right-4 max-w-lg mx-auto z-[1000] bg-slate-900/95 border border-slate-800 rounded-2xl p-3 shadow-2xl backdrop-blur-md flex items-center gap-3">
           <button
             onClick={togglePlay}
-            className="flex items-center justify-center p-2 rounded-lg bg-cyan-500/10 text-cyan-400 hover:bg-cyan-500/20 transition-colors"
+            className="flex items-center justify-center p-2.5 rounded-xl bg-cyan-500/10 text-cyan-400 hover:bg-cyan-500/20 transition-colors"
             aria-label={isPlaying ? 'Pause' : 'Play'}
           >
             {isPlaying ? <Pause size={18} /> : <Play size={18} />}
@@ -161,9 +187,9 @@ export default function PrecipitationRadar() {
                   setIsPlaying(false);
                   setCurrentIndex(idx);
                 }}
-                className={`h-2 rounded-full transition-all flex-1 ${
+                className={`h-2.5 rounded-full transition-all flex-1 ${
                   idx === currentIndex
-                    ? 'bg-cyan-400 shadow-sm shadow-cyan-400/50'
+                    ? 'bg-cyan-400 shadow-sm shadow-cyan-400/50 scale-y-125'
                     : 'bg-slate-800 hover:bg-slate-700'
                 }`}
                 title={formatTime(frame.time)}
@@ -179,7 +205,7 @@ export default function PrecipitationRadar() {
             className="p-2 text-slate-400 hover:text-slate-200 transition-colors"
             title="Reset to latest"
           >
-            <RotateCcw size={16} />
+            <RotateCcw size={18} />
           </button>
         </div>
       )}

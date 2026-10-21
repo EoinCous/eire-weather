@@ -2,6 +2,7 @@ import WeatherDashboard from './pages/WeatherDashboard';
 import DetailedDayForecast from './pages/DetailedDayForecast';
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import { WeatherProvider } from './context/WeatherContext';
+import PrecipitationRadar from './pages/PrecipitationRadar';
 
 export default function App() {
   return (
@@ -11,6 +12,7 @@ export default function App() {
           <Routes>
             <Route path="/" element={<WeatherDashboard />} />
             <Route path="/day/:dateKey" element={<DetailedDayForecast />} />
+            <Route path="/precipitationradar" element={<PrecipitationRadar />} />
           </Routes>
         </BrowserRouter>
       </div>

@@ -1,4 +1,5 @@
 import { useWeather } from '../context/WeatherContext';
+import { useNavigate } from 'react-router-dom';
 import { 
   MapPin, Loader2, AlertCircle
 } from 'lucide-react';
@@ -9,10 +10,11 @@ import { WeatherIcon } from '../components/WeatherIcon';
 import WeatherWarnings from '../components/WeatherWarnings';
 import SunMoonInfo from '../components/SunMoonInfo';
 import { SearchBar } from '../components/SearchBar';
-import PrecipitationRadar from '../components/PrecipitationRadar';
+import PrecipitationRadarPreview from '../components/PrecipitationRadarPreview';
 
 export default function WeatherDashboard() {
   const { coords, weather, locationName, loading, error, requestLocation } = useWeather();
+  const { navigate } = useNavigate();
 
   if (loading) {
     return (
@@ -72,7 +74,7 @@ export default function WeatherDashboard() {
 
       <CurrentConditions current={current} />
 
-      <PrecipitationRadar />
+      <PrecipitationRadarPreview onClick={() => navigate('/precipitationradar')}/>
 
       {/* 24h Rainfall & Temperature */}
       {hourlyForecasts && <WeatherChart hourlyForecasts={hourlyForecasts} />}
