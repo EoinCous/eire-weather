@@ -9,6 +9,7 @@ import { WeatherIcon } from '../components/WeatherIcon';
 import WeatherWarnings from '../components/WeatherWarnings';
 import SunMoonInfo from '../components/SunMoonInfo';
 import { SearchBar } from '../components/SearchBar';
+import PrecipitationRadar from '../components/PrecipitationRadar';
 
 export default function WeatherDashboard() {
   const { coords, weather, locationName, loading, error, requestLocation } = useWeather();
@@ -70,6 +71,8 @@ export default function WeatherDashboard() {
       <WeatherWarnings />
 
       <CurrentConditions current={current} />
+
+      <PrecipitationRadar />
 
       {/* 24h Rainfall & Temperature */}
       {hourlyForecasts && <WeatherChart hourlyForecasts={hourlyForecasts} />}
