@@ -39,11 +39,27 @@ export default function PrecipitationRadarPreview() {
       }).addTo(mapInstanceRef.current);
     }
 
-    // 2. Fetch Latest RainViewer Frame Only
+    // 2. Fetch Latest RainViewer Frame with sessionStorage Caching
     async function loadLatestFrame() {
       try {
-        const response = await fetch('https://api.rainviewer.com/public/weather-maps.json');
-        const data = await response.json();
+        const CACHE_KEY = 'eire_weather_rainviewer_cache';
+        const CACHE_TIME_KEY = 'eire_weather_rainviewer_time';
+        const FIVE_MINUTES = 5 * 60 * 1000;
+
+        let data = null;
+        const cachedData = sessionStorage.getItem(CACHE_KEY);
+        const cachedTime = sessionStorage.getItem(CACHE_TIME_KEY);
+
+        // Use cached manifest if less than 5 minutes old
+        if (cachedData && cachedTime && (Date.now() - parseInt(cachedTime) < FIVE_MINUTES)) {
+          data = JSON.parse(cachedData);
+        } else {
+          const response = await fetch('https://api.rainviewer.com/public/weather-maps.json');
+          data = await response.json();
+          
+          sessionStorage.setItem(CACHE_KEY, JSON.stringify(data));
+          sessionStorage.setItem(CACHE_TIME_KEY, Date.now().toString());
+        }
 
         if (data && data.radar && data.radar.past && data.radar.past.length > 0) {
           const host = data.host;
@@ -84,7 +100,7 @@ export default function PrecipitationRadarPreview() {
 
   return (
     <div 
-      onClick={() => navigate('/precipitationradar')}
+      onClick={() => navigate('/precipitation-radar')}
       className="group cursor-pointer bg-slate-900/60 border border-slate-800 hover:border-cyan-500/50 rounded-2xl p-4 shadow-xl backdrop-blur-md transition-all duration-300"
     >
       <div className="flex items-center justify-between mb-3">
@@ -108,12 +124,6 @@ export default function PrecipitationRadarPreview() {
             Loading radar map...
           </div>
         )}
-
-        {/* Floating Expand Prompt Overlay */}
-        <div className="absolute bottom-3 right-3 z-20 bg-slate-950/80 hover:bg-slate-900 border border-slate-700/80 text-cyan-400 text-xs font-medium px-3 py-1.5 rounded-lg flex items-center gap-1.5 shadow-lg backdrop-blur-md transition-colors">
-          <Maximize2 size={13} />
-          <span>Tap to Expand</span>
-        </div>
       </div>
     </div>
   );

@@ -14,7 +14,7 @@ export default function PrecipitationRadar() {
   const [isPlaying, setIsPlaying] = useState(false);
   const [loading, setLoading] = useState(true);
 
-  // 1. Initialize Fullscreen Map & Load RainViewer Frames
+  // 1. Initialize Fullscreen Map & Load RainViewer Frames with Caching
   useEffect(() => {
     if (!mapInstanceRef.current) {
       const irelandBounds = L.latLngBounds(
@@ -38,13 +38,29 @@ export default function PrecipitationRadar() {
 
     async function loadRadarFrames() {
       try {
-        const response = await fetch('https://api.rainviewer.com/public/weather-maps.json');
-        const data = await response.json();
+        const CACHE_KEY = 'eire_weather_rainviewer_cache';
+        const CACHE_TIME_KEY = 'eire_weather_rainviewer_time';
+        const FIVE_MINUTES = 5 * 60 * 1000;
+
+        let data = null;
+        const cachedData = sessionStorage.getItem(CACHE_KEY);
+        const cachedTime = sessionStorage.getItem(CACHE_TIME_KEY);
+
+        // Use cache if less than 5 minutes old
+        if (cachedData && cachedTime && (Date.now() - parseInt(cachedTime) < FIVE_MINUTES)) {
+          data = JSON.parse(cachedData);
+        } else {
+          const response = await fetch('https://api.rainviewer.com/public/weather-maps.json');
+          data = await response.json();
+          
+          sessionStorage.setItem(CACHE_KEY, JSON.stringify(data));
+          sessionStorage.setItem(CACHE_TIME_KEY, Date.now().toString());
+        }
 
         if (data && data.radar && data.radar.past && data.radar.past.length > 0) {
           const host = data.host;
-          // Take the last 8 frames (~2 hours of history)
-          const pastFrames = data.radar.past.slice(-8);
+          // (2 hours of history)
+          const pastFrames = data.radar.past;
 
           // Clear out any existing radar layers to prevent ghosting/stacking
           Object.values(radarLayersRef.current).forEach((layer) => {
@@ -114,7 +130,7 @@ export default function PrecipitationRadar() {
     if (isPlaying && frames.length > 0) {
       interval = setInterval(() => {
         setCurrentIndex((prevIndex) => (prevIndex + 1) % frames.length);
-      }, 600); // Advances frame every 600ms
+      }, 400); // Advances frame every 600ms
     } else {
       clearInterval(interval);
     }
@@ -135,8 +151,8 @@ export default function PrecipitationRadar() {
 
   return (
     <div className="fixed inset-0 z-50 w-full h-[100dvh] bg-slate-950 overflow-hidden">
-      {/* Floating Header */}
-      <div className="absolute top-4 left-4 right-4 z-[1000] flex items-center justify-between bg-slate-900/90 border border-slate-800 rounded-2xl px-4 py-3 shadow-2xl backdrop-blur-md">
+      {/* Floating Header with Safe Area Top Offset */}
+      <div className="absolute top-[calc(1rem+env(safe-area-inset-top))] left-4 right-4 z-[1000] flex items-center justify-between bg-slate-900/90 border border-slate-800 rounded-2xl px-4 py-3 shadow-2xl backdrop-blur-md">
         <button
           onClick={() => navigate(-1)}
           className="flex items-center gap-2 text-sm text-slate-300 hover:text-white transition-colors"
@@ -146,12 +162,12 @@ export default function PrecipitationRadar() {
         </button>
 
         <h2 className="text-sm font-semibold text-slate-200 tracking-wide uppercase">
-          Live Radar Timeline
+          Precipitation Radar
         </h2>
 
         {activeTime ? (
           <span className="text-xs bg-slate-800 text-cyan-400 px-2.5 py-1 rounded-full font-medium">
-            {activeTime} {currentIndex === frames.length - 1 && !isPlaying ? '(Latest)' : ''}
+            {activeTime}
           </span>
         ) : (
           <div className="w-12" />
@@ -167,9 +183,9 @@ export default function PrecipitationRadar() {
         </div>
       )}
 
-      {/* Floating Bottom Animation Scrubber Bar */}
+      {/* Floating Bottom Animation Scrubber Bar with Safe Area Bottom Offset */}
       {!loading && frames.length > 0 && (
-        <div className="absolute bottom-6 left-4 right-4 max-w-lg mx-auto z-[1000] bg-slate-900/95 border border-slate-800 rounded-2xl p-3 shadow-2xl backdrop-blur-md flex items-center gap-3">
+        <div className="absolute bottom-[calc(1.5rem+env(safe-area-inset-bottom))] left-4 right-4 max-w-lg mx-auto z-[1000] bg-slate-900/95 border border-slate-800 rounded-2xl p-3 shadow-2xl backdrop-blur-md flex items-center gap-3">
           <button
             onClick={togglePlay}
             className="flex items-center justify-center p-2.5 rounded-xl bg-cyan-500/10 text-cyan-400 hover:bg-cyan-500/20 transition-colors"
@@ -178,35 +194,23 @@ export default function PrecipitationRadar() {
             {isPlaying ? <Pause size={18} /> : <Play size={18} />}
           </button>
 
-          {/* Timeline Step Dots */}
-          <div className="flex-1 flex items-center justify-between gap-1.5 px-2">
-            {frames.map((frame, idx) => (
-              <button
-                key={frame.time}
-                onClick={() => {
-                  setIsPlaying(false);
-                  setCurrentIndex(idx);
-                }}
-                className={`h-2.5 rounded-full transition-all flex-1 ${
-                  idx === currentIndex
-                    ? 'bg-cyan-400 shadow-sm shadow-cyan-400/50 scale-y-125'
-                    : 'bg-slate-800 hover:bg-slate-700'
-                }`}
-                title={formatTime(frame.time)}
-              />
-            ))}
-          </div>
-
-          <button
-            onClick={() => {
+          {/* Clickable Progress Timeline Bar */}
+          <div 
+            className="flex-1 h-3 bg-slate-800 rounded-full overflow-hidden relative cursor-pointer"
+            onClick={(e) => {
+              const rect = e.currentTarget.getBoundingClientRect();
+              const clickX = e.clientX - rect.left;
+              const percentage = clickX / rect.width;
+              const targetIdx = Math.floor(percentage * frames.length);
               setIsPlaying(false);
-              setCurrentIndex(frames.length - 1);
+              setCurrentIndex(Math.min(Math.max(targetIdx, 0), frames.length - 1));
             }}
-            className="p-2 text-slate-400 hover:text-slate-200 transition-colors"
-            title="Reset to latest"
           >
-            <RotateCcw size={18} />
-          </button>
+            <div 
+              className="h-full bg-cyan-400 transition-all duration-200"
+              style={{ width: `${((currentIndex + 1) / frames.length) * 100}%` }}
+            />
+          </div>
         </div>
       )}
     </div>

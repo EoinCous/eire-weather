@@ -12,7 +12,7 @@ export default function App() {
           <Routes>
             <Route path="/" element={<WeatherDashboard />} />
             <Route path="/day/:dateKey" element={<DetailedDayForecast />} />
-            <Route path="/precipitationradar" element={<PrecipitationRadar />} />
+            <Route path="/precipitation-radar" element={<PrecipitationRadar />} />
           </Routes>
         </BrowserRouter>
       </div>
