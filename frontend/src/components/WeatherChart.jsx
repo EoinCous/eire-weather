@@ -28,6 +28,12 @@ function formatWeekday(timestamp) {
   return new Date(timestamp).toLocaleDateString('en-IE', { weekday: 'short' });
 }
 
+// True when the timestamp is the hour we are currently in
+function isCurrentHour(timestamp) {
+  const elapsed = Date.now() - new Date(timestamp).getTime();
+  return elapsed >= 0 && elapsed < 60 * 60 * 1000;
+}
+
 function isSameDay(a, b) {
   return new Date(a).toDateString() === new Date(b).toDateString();
 }
@@ -103,6 +109,7 @@ export default function WeatherChart({ hourlyForecasts, WeatherIcon }) {
 
       return {
         index,
+        timestamp: item.timestamp,
         time,
         label: sameDay ? time : `${formatWeekday(item.timestamp)} ${time}`,
         temp: item.temperatureC != null ? Math.round(item.temperatureC) : null,
@@ -141,13 +148,12 @@ export default function WeatherChart({ hourlyForecasts, WeatherIcon }) {
       tempMax,
       rainMax,
       headline: describeRain(data),
-      slots: data.filter((_, i) => i % 3 === 0),
     };
   }, [forecasts]);
 
   if (!model) return null;
 
-  const { data, low, high, totalRain, peak, midnight, tempMin, tempMax, rainMax, headline, slots } = model;
+  const { data, low, high, totalRain, peak, midnight, tempMin, tempMax, rainMax, headline } = model;
 
   return (
     <section
@@ -164,29 +170,62 @@ export default function WeatherChart({ hourlyForecasts, WeatherIcon }) {
         </p>
       </div>
 
-      {/* Glanceable strip: every 3 hours */}
-      <div className="grid grid-cols-4 sm:grid-cols-8 gap-y-3 px-4 md:px-6 pt-4">
-        {slots.map((slot) => (
-          <div key={slot.index} className="flex flex-col items-center gap-1.5">
-            <span className="text-[11px] text-slate-500">{slot.time}</span>
+      {/* Glanceable strip.
+          Mobile: every hour in one swipeable row.
+          sm and up: every 3rd hour, spread evenly across the card. */}
+      <div className="relative pt-4">
+        <div
+          className="flex gap-1 overflow-x-auto snap-x snap-mandatory px-4 md:px-6 pb-1
+                     sm:grid sm:grid-cols-8 sm:overflow-visible
+                     [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+          role="list"
+          aria-label="Hourly forecast, swipe to see more"
+        >
+          {data.map((slot) => {
+            const isNow = slot.index === 0 && isCurrentHour(slot.timestamp);
+            const isMidnight = midnight && slot.index === midnight.index;
+            const label = isNow ? 'Now' : isMidnight ? formatWeekday(slot.timestamp) : slot.time;
 
-            {WeatherIcon && slot.weatherSymbol ? (
-              <WeatherIcon symbol={slot.weatherSymbol} className="w-6 h-6 text-slate-300" />
-            ) : null}
+            return (
+              <div
+                key={slot.index}
+                role="listitem"
+                className={`${
+                  slot.index % 3 === 0 ? 'flex' : 'flex sm:hidden'
+                } flex-col items-center gap-1.5 shrink-0 w-14 sm:w-auto snap-start py-1 ${
+                  isMidnight ? 'border-l border-slate-700/80' : ''
+                }`}
+              >
+                <span
+                  className={`text-[11px] ${
+                    isNow || isMidnight ? 'font-semibold text-slate-200' : 'text-slate-500'
+                  }`}
+                >
+                  {label}
+                </span>
 
-            <span className="text-sm font-semibold text-slate-100">
-              {slot.temp != null ? `${slot.temp}°` : '—'}
-            </span>
+                {WeatherIcon && slot.weatherSymbol ? (
+                  <WeatherIcon symbol={slot.weatherSymbol} className="w-6 h-6 text-slate-300" />
+                ) : null}
 
-            <span
-              className={`text-[11px] ${
-                slot.rain >= WET_THRESHOLD_MM ? 'text-cyan-400 font-medium' : 'text-slate-600'
-              }`}
-            >
-              {slot.rain >= WET_THRESHOLD_MM ? `${slot.rain.toFixed(1)} mm` : 'Dry'}
-            </span>
-          </div>
-        ))}
+                <span className="text-sm font-semibold text-slate-100">
+                  {slot.temp != null ? `${slot.temp}°` : '—'}
+                </span>
+
+                <span
+                  className={`text-[11px] ${
+                    slot.rain >= WET_THRESHOLD_MM ? 'text-cyan-400 font-medium' : 'text-slate-600'
+                  }`}
+                >
+                  {slot.rain >= WET_THRESHOLD_MM ? `${slot.rain.toFixed(1)} mm` : 'Dry'}
+                </span>
+              </div>
+            );
+          })}
+        </div>
+
+        {/* Fade on the right edge hints that the row scrolls (mobile only) */}
+        <div className="pointer-events-none absolute right-0 top-4 bottom-1 w-10 bg-gradient-to-l from-slate-900 to-transparent sm:hidden" />
       </div>
 
       {/* Chart */}
