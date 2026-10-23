@@ -1,337 +1,294 @@
+import { useMemo } from 'react';
 import {
   ResponsiveContainer,
   ComposedChart,
-  Line,
+  Area,
   Bar,
+  Cell,
   XAxis,
   YAxis,
   Tooltip,
-  CartesianGrid,
+  ReferenceLine,
+  ReferenceDot,
 } from 'recharts';
 
-import {
-  CloudRain,
-  TrendingDown,
-  TrendingUp,
-} from 'lucide-react';
+const WET_THRESHOLD_MM = 0.1; // below this counts as dry
+const MIN_RAIN_SCALE_MM = 2; // fixed floor so drizzle never looks like a downpour
 
+// Irish convention: 24-hour clock
 function formatHour(timestamp) {
-  return new Date(timestamp).toLocaleTimeString([], {
+  return new Date(timestamp).toLocaleTimeString('en-IE', {
     hour: '2-digit',
     minute: '2-digit',
+    hour12: false,
   });
 }
 
-function formatShortHour(timestamp) {
-  return new Date(timestamp).toLocaleTimeString([], {
-    hour: 'numeric',
-  });
+function formatWeekday(timestamp) {
+  return new Date(timestamp).toLocaleDateString('en-IE', { weekday: 'short' });
 }
 
-function CustomTooltip({ active, payload, label }) {
-  if (!active || !payload || payload.length === 0) {
-    return null;
+function isSameDay(a, b) {
+  return new Date(a).toDateString() === new Date(b).toDateString();
+}
+
+// Turns the hourly data into a sentence a person can read in one second
+function describeRain(data) {
+  const wet = data.map((d) => d.rain >= WET_THRESHOLD_MM);
+
+  if (!wet.some(Boolean)) return 'Dry for the next 24 hours';
+  if (wet.every(Boolean)) return 'Rain throughout the next 24 hours';
+
+  if (!wet[0]) {
+    const firstWet = wet.indexOf(true);
+    return `Dry until ${data[firstWet].time}, then rain`;
   }
 
-  const temperature = payload.find(
-    (entry) => entry.dataKey === 'temp'
-  );
+  const firstDry = wet.indexOf(false);
+  return `Rain until ${data[firstDry].time}`;
+}
 
-  const rainfall = payload.find(
-    (entry) => entry.dataKey === 'rain'
-  );
+function rainColour(mm) {
+  if (mm >= 2) return '#0891b2';
+  if (mm >= 0.5) return '#06b6d4';
+  return '#67e8f9';
+}
+
+function CustomTooltip({ active, payload }) {
+  if (!active || !payload || payload.length === 0) return null;
+
+  const point = payload[0].payload;
 
   return (
-    <div className="bg-slate-900/95 border border-slate-700/80 px-4 py-3 rounded-2xl shadow-2xl backdrop-blur-md min-w-[160px]">
-      <p className="text-xs font-semibold text-slate-300 mb-3">
-        {label}
-      </p>
+    <div className="bg-slate-900/95 border border-slate-700/80 px-4 py-3 rounded-xl shadow-2xl backdrop-blur-md min-w-[150px]">
+      <p className="text-xs font-semibold text-slate-300 mb-2">{point.label}</p>
 
-      <div className="space-y-2">
-        {temperature && temperature.value != null && (
-          <div className="flex items-center justify-between gap-6">
-            <div className="flex items-center gap-2">
-              <div className="w-2 h-2 rounded-full bg-blue-400" />
-              <span className="text-xs text-slate-400">
-                Temperature
-              </span>
-            </div>
+      <div className="space-y-1.5">
+        <div className="flex items-center justify-between gap-6">
+          <span className="text-xs text-slate-400">Temperature</span>
+          <span className="text-sm font-bold text-slate-100">
+            {point.temp != null ? `${point.temp}°C` : '—'}
+          </span>
+        </div>
 
-            <span className="text-sm font-bold text-slate-100">
-              {temperature.value}°C
-            </span>
-          </div>
-        )}
-
-        {rainfall && (
-          <div className="flex items-center justify-between gap-6">
-            <div className="flex items-center gap-2">
-              <div className="w-2 h-2 rounded-full bg-cyan-400" />
-              <span className="text-xs text-slate-400">
-                Rain
-              </span>
-            </div>
-
-            <span className="text-sm font-bold text-slate-100">
-              {Number(rainfall.value).toFixed(1)} mm
-            </span>
-          </div>
-        )}
+        <div className="flex items-center justify-between gap-6">
+          <span className="text-xs text-slate-400">Rain</span>
+          <span className="text-sm font-bold text-slate-100">
+            {point.rain >= WET_THRESHOLD_MM ? `${point.rain.toFixed(1)} mm` : 'Dry'}
+          </span>
+        </div>
       </div>
     </div>
   );
 }
 
-function SummaryStat({ icon: Icon, label, value, iconClass }) {
-  return (
-    <div className="flex items-center gap-3">
-      <div className="w-8 h-8 rounded-xl bg-slate-800/70 flex items-center justify-center">
-        <Icon className={`w-4 h-4 ${iconClass}`} />
-      </div>
-
-      <div>
-        <p className="text-[10px] uppercase tracking-wider text-slate-500 font-medium">
-          {label}
-        </p>
-
-        <p className="text-sm font-bold text-slate-100">
-          {value}
-        </p>
-      </div>
-    </div>
-  );
-}
-
-export default function WeatherChart({
-  hourlyForecasts
-}) {
+/**
+ * Props:
+ *  - hourlyForecasts: array of { timestamp, temperatureC, precipitationMm, weatherSymbol }
+ *  - WeatherIcon (optional): your existing icon component. It is rendered as
+ *    <WeatherIcon symbol={...} className="..." />. Rename the `symbol` prop below
+ *    if your component expects something different.
+ */
+export default function WeatherChart({ hourlyForecasts, WeatherIcon }) {
   const forecasts = hourlyForecasts?.slice(0, 24) ?? [];
 
-  if (forecasts.length === 0) {
-    return null;
-  }
+  const model = useMemo(() => {
+    if (forecasts.length === 0) return null;
 
-  const chartData = forecasts.map((item, index) => ({
-    timestamp: item.timestamp,
-    time: formatHour(item.timestamp),
-    chartTime: formatShortHour(item.timestamp),
-    temp:
-      item.temperatureC != null
-        ? Math.round(item.temperatureC)
-        : null,
-    rain:
-      item.precipitationMm != null
-        ? Number(item.precipitationMm)
-        : 0,
-    weatherSymbol: item.weatherSymbol,
-    index,
-  }));
+    const first = forecasts[0].timestamp;
 
-  const temperatures = chartData
-    .map((item) => item.temp)
-    .filter((value) => value != null);
+    const data = forecasts.map((item, index) => {
+      const time = formatHour(item.timestamp);
+      const sameDay = isSameDay(item.timestamp, first);
 
-  const maxRain = Math.max(
-    ...chartData.map((item) => item.rain),
-    0
-  );
+      return {
+        index,
+        time,
+        label: sameDay ? time : `${formatWeekday(item.timestamp)} ${time}`,
+        temp: item.temperatureC != null ? Math.round(item.temperatureC) : null,
+        rain: item.precipitationMm != null ? Number(item.precipitationMm) : 0,
+        weatherSymbol: item.weatherSymbol,
+      };
+    });
 
-  const minTemp =
-    temperatures.length > 0
-      ? Math.floor(Math.min(...temperatures) - 1)
-      : 0;
+    const withTemp = data.filter((d) => d.temp != null);
+    const low = withTemp.length ? withTemp.reduce((a, b) => (b.temp < a.temp ? b : a)) : null;
+    const high = withTemp.length ? withTemp.reduce((a, b) => (b.temp > a.temp ? b : a)) : null;
 
-  const maxTemp =
-    temperatures.length > 0
-      ? Math.ceil(Math.max(...temperatures) + 1)
-      : 10;
+    const maxRain = Math.max(...data.map((d) => d.rain), 0);
+    const totalRain = data.reduce((sum, d) => sum + d.rain, 0);
+    const peak = maxRain >= WET_THRESHOLD_MM ? data.find((d) => d.rain === maxRain) : null;
 
-  const lowTemp =
-    temperatures.length > 0
-      ? Math.min(...temperatures)
-      : null;
+    // First hour that falls on a different calendar day marks midnight
+    const midnight = data.find((d, i) => i > 0 && !isSameDay(forecasts[i].timestamp, first));
 
-  const highTemp =
-    temperatures.length > 0
-      ? Math.max(...temperatures)
-      : null;
+    // Temperature domain: leave the bottom of the chart free for the rain bars
+    const range = low && high ? Math.max(high.temp - low.temp, 3) : 3;
+    const tempMin = low ? low.temp - range * 0.9 : 0;
+    const tempMax = high ? high.temp + 1 : 10;
 
-  const totalRain = chartData.reduce(
-    (total, item) => total + item.rain,
-    0
-  );
+    // Rain domain: bars fill the bottom third at most, on a fixed minimum scale
+    const rainMax = Math.max(maxRain, MIN_RAIN_SCALE_MM) * 3;
 
-  const rainDomainMax =
-    maxRain > 0
-      ? Math.max(Math.ceil(maxRain * 1.25 * 10) / 10, 1)
-      : 1;
+    return {
+      data,
+      low,
+      high,
+      totalRain,
+      peak,
+      midnight,
+      tempMin,
+      tempMax,
+      rainMax,
+      headline: describeRain(data),
+      slots: data.filter((_, i) => i % 3 === 0),
+    };
+  }, [forecasts]);
+
+  if (!model) return null;
+
+  const { data, low, high, totalRain, peak, midnight, tempMin, tempMax, rainMax, headline, slots } = model;
 
   return (
-    <section className="bg-slate-900/30 border border-slate-800/50 rounded-3xl shadow-xl overflow-hidden">
+    <section
+      className="bg-slate-900/30 border border-slate-800/50 rounded-3xl shadow-xl overflow-hidden"
+      aria-label="Next 24 hours forecast"
+    >
+      {/* Headline: the answer first */}
+      <div className="p-5 md:p-6 pb-2 md:pb-2">
+        <h2 className="text-xl md:text-2xl font-semibold text-white tracking-tight">{headline}</h2>
 
-      {/* Header */}
-      <div className="p-5 md:p-6 border-b border-slate-800/50">
-        <div className="flex flex-col gap-5">
+        <p className="text-sm text-slate-400 mt-1.5">
+          {totalRain >= WET_THRESHOLD_MM ? `${totalRain.toFixed(1)} mm expected in total` : 'No measurable rain expected'}
+          {peak ? `, heaviest around ${peak.time} (${peak.rain.toFixed(1)} mm)` : ''}
+        </p>
+      </div>
 
-          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-            <div>
-              <div className="flex items-center gap-2">
-                <h2 className="text-sm font-semibold text-white uppercase tracking-widest">
-                  Next 24 Hours
-                </h2>
+      {/* Glanceable strip: every 3 hours */}
+      <div className="grid grid-cols-4 sm:grid-cols-8 gap-y-3 px-4 md:px-6 pt-4">
+        {slots.map((slot) => (
+          <div key={slot.index} className="flex flex-col items-center gap-1.5">
+            <span className="text-[11px] text-slate-500">{slot.time}</span>
 
-                <span className="px-2 py-0.5 rounded-full bg-slate-800 text-[10px] text-slate-400 uppercase tracking-wide">
-                  Hourly
-                </span>
-              </div>
+            {WeatherIcon && slot.weatherSymbol ? (
+              <WeatherIcon symbol={slot.weatherSymbol} className="w-6 h-6 text-slate-300" />
+            ) : null}
 
-              <p className="text-xs text-slate-500 mt-1">
-                Temperature and precipitation over the next 24 hours
-              </p>
-            </div>
+            <span className="text-sm font-semibold text-slate-100">
+              {slot.temp != null ? `${slot.temp}°` : '—'}
+            </span>
 
-            {/* Summary */}
-            <div className="grid grid-cols-3 gap-4 sm:gap-5">
-              <SummaryStat
-                icon={TrendingDown}
-                label="Low"
-                value={lowTemp != null ? `${lowTemp}°C` : '—'}
-                iconClass="text-blue-400"
-              />
-
-              <SummaryStat
-                icon={TrendingUp}
-                label="High"
-                value={highTemp != null ? `${highTemp}°C` : '—'}
-                iconClass="text-orange-400"
-              />
-
-              <SummaryStat
-                icon={CloudRain}
-                label="Rain"
-                value={`${totalRain.toFixed(1)} mm`}
-                iconClass="text-cyan-400"
-              />
-            </div>
+            <span
+              className={`text-[11px] ${
+                slot.rain >= WET_THRESHOLD_MM ? 'text-cyan-400 font-medium' : 'text-slate-600'
+              }`}
+            >
+              {slot.rain >= WET_THRESHOLD_MM ? `${slot.rain.toFixed(1)} mm` : 'Dry'}
+            </span>
           </div>
-        </div>
+        ))}
       </div>
 
       {/* Chart */}
-      <div className="px-4 pt-5 md:px-6">
-        <div className="h-72 w-full">
+      <div className="px-2 md:px-4 pt-4 pb-3">
+        <div className="h-64 w-full">
           <ResponsiveContainer width="100%" height="100%">
-            <ComposedChart
-              data={chartData}
-              margin={{
-                top: 10,
-                right: 0,
-                left: -15,
-                bottom: 0,
-              }}
-              barCategoryGap="20%"
-            >
-              <CartesianGrid
-                strokeDasharray="3 3"
-                stroke="#1e293b"
-                vertical={false}
-              />
+            <ComposedChart data={data} margin={{ top: 24, right: 16, left: 16, bottom: 0 }} barCategoryGap="15%">
+              <defs>
+                <linearGradient id="tempFill" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="0%" stopColor="#3b82f6" stopOpacity={0.35} />
+                  <stop offset="100%" stopColor="#3b82f6" stopOpacity={0} />
+                </linearGradient>
+              </defs>
 
               <XAxis
-                dataKey="chartTime"
-                stroke="#475569"
-                tick={{
-                  fill: '#64748b',
-                  fontSize: 10,
-                }}
+                dataKey="index"
+                tickFormatter={(i) => data[i]?.time ?? ''}
+                interval={2}
+                tick={{ fill: '#64748b', fontSize: 10 }}
                 tickLine={false}
                 axisLine={false}
-                interval={1}
               />
 
-              {/* Temperature axis */}
-              <YAxis
-                yAxisId="temperature"
-                orientation="left"
-                domain={[minTemp, maxTemp]}
-                tick={{
-                  fill: '#94a3b8',
-                  fontSize: 10,
-                }}
-                tickLine={false}
-                axisLine={false}
-                width={35}
-                tickFormatter={(value) => `${value}°`}
-              />
+              {/* Both value axes are hidden: values are labelled directly instead */}
+              <YAxis yAxisId="temperature" hide domain={[tempMin, tempMax]} />
+              <YAxis yAxisId="rain" hide domain={[0, rainMax]} />
 
-              {/* Rain axis */}
-              <YAxis
-                yAxisId="rain"
-                orientation="right"
-                domain={[0, rainDomainMax]}
-                tick={{
-                  fill: '#64748b',
-                  fontSize: 10,
-                }}
-                tickLine={false}
-                axisLine={false}
-                width={32}
-                tickFormatter={(value) => `${value}`}
-              />
+              <Tooltip content={<CustomTooltip />} cursor={{ stroke: '#475569', strokeDasharray: '3 3' }} />
 
-              <Tooltip
-                content={<CustomTooltip />}
-                cursor={{
-                  fill: 'rgba(51, 65, 85, 0.18)',
-                }}
-              />
+              {midnight && (
+                <ReferenceLine
+                  yAxisId="temperature"
+                  x={midnight.index}
+                  stroke="#475569"
+                  strokeDasharray="4 4"
+                  label={{
+                    value: formatWeekday(forecasts[midnight.index].timestamp),
+                    position: 'insideTopRight',
+                    fill: '#94a3b8',
+                    fontSize: 10,
+                  }}
+                />
+              )}
 
-              {/* Rainfall */}
-              <Bar
-                yAxisId="rain"
-                dataKey="rain"
-                name="Rainfall"
-                fill="#06b6d4"
-                fillOpacity={0.45}
-                radius={[5, 5, 0, 0]}
-                maxBarSize={18}
-              />
-
-              {/* Temperature */}
-              <Line
+              <Area
                 yAxisId="temperature"
                 type="monotone"
                 dataKey="temp"
-                name="Temperature"
                 stroke="#3b82f6"
-                strokeWidth={3}
+                strokeWidth={2.5}
+                fill="url(#tempFill)"
                 dot={false}
-                activeDot={{
-                  r: 5,
-                  strokeWidth: 2,
-                  stroke: '#93c5fd',
-                  fill: '#3b82f6',
-                }}
+                activeDot={{ r: 5, strokeWidth: 2, stroke: '#93c5fd', fill: '#3b82f6' }}
                 connectNulls={false}
+                isAnimationActive={false}
               />
+
+              <Bar yAxisId="rain" dataKey="rain" radius={[4, 4, 0, 0]} maxBarSize={16} isAnimationActive={false}>
+                {data.map((d) => (
+                  <Cell key={d.index} fill={rainColour(d.rain)} fillOpacity={d.rain >= WET_THRESHOLD_MM ? 0.85 : 0} />
+                ))}
+              </Bar>
+
+              {/* Label the extremes directly instead of using an axis */}
+              {high && (
+                <ReferenceDot
+                  yAxisId="temperature"
+                  x={high.index}
+                  y={high.temp}
+                  r={4}
+                  fill="#fb923c"
+                  stroke="#0f172a"
+                  strokeWidth={2}
+                  label={{ value: `${high.temp}°`, position: 'top', fill: '#fdba74', fontSize: 12, fontWeight: 600 }}
+                />
+              )}
+
+              {low && low.index !== high?.index && (
+                <ReferenceDot
+                  yAxisId="temperature"
+                  x={low.index}
+                  y={low.temp}
+                  r={4}
+                  fill="#60a5fa"
+                  stroke="#0f172a"
+                  strokeWidth={2}
+                  label={{ value: `${low.temp}°`, position: 'top', fill: '#93c5fd', fontSize: 12, fontWeight: 600 }}
+                />
+              )}
             </ComposedChart>
           </ResponsiveContainer>
         </div>
 
-        {/* Axis legend */}
-        <div className="flex items-center justify-center gap-5 pb-4 pt-1">
+        <div className="flex items-center justify-center gap-5 pt-2">
           <div className="flex items-center gap-2">
             <span className="w-2.5 h-2.5 rounded-full bg-blue-500" />
-            <span className="text-[11px] text-slate-500">
-              Temperature
-            </span>
+            <span className="text-[11px] text-slate-500">Temperature</span>
           </div>
 
           <div className="flex items-center gap-2">
-            <span className="w-2.5 h-2.5 rounded-sm bg-cyan-500/60" />
-            <span className="text-[11px] text-slate-500">
-              Rainfall
-            </span>
+            <span className="w-2.5 h-2.5 rounded-sm bg-cyan-500/70" />
+            <span className="text-[11px] text-slate-500">Rain per hour</span>
           </div>
         </div>
       </div>

@@ -37,7 +37,6 @@
 - **Mapping**: Leaflet (`react-leaflet` / vanilla Leaflet integration with custom tile layer opacity management)
 - **Icons**: [Lucide React](https://lucide.dev/)
 - **Routing**: React Router (`react-router-dom`)
-- **Deployment**: Vercel (configured with SPA rewrites and zero-cache control headers for service workers)
 
 ### **Backend**
 - **Framework**: Java / Spring Boot
