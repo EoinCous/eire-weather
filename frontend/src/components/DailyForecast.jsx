@@ -2,8 +2,9 @@ import { useState } from 'react';
 import { Droplet, Sparkles, Loader2, RefreshCw, AlertCircle } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useWeather } from '../context/WeatherContext';
+import { WeatherIcon } from './WeatherIcon';
 
-export default function DailyForecast({ hourlyForecasts, WeatherIcon }) {
+export default function DailyForecast({ hourlyForecasts }) {
   const navigate = useNavigate();
   const { fetchAiSummary } = useWeather();
 

@@ -502,15 +502,9 @@ export default function DetailedDayForecast() {
         </section>
 
         {/* SUN & MOON */}
-        {coords?.lat != null && coords?.lon != null && (
-          <div className="mb-8">
-            <SunMoonInfo
-              lat={coords.lat}
-              lon={coords.lon}
-              date={daySummary.dateKey}
-            />
-          </div>
-        )}
+        <div className="mb-8">
+          <SunMoonInfo date={daySummary.dateKey} />
+        </div>
 
         {/* HOURLY BREAKDOWN */}
         <section>

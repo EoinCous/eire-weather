@@ -83,7 +83,12 @@ function getCurrentPosition() {
       resolve,
       reject,
       {
-        enableHighAccuracy: true,
+        /*
+         * Forecasts are on a grid of roughly a kilometre, so a coarse
+         * (wifi / network) fix is plenty. High accuracy forces a GPS
+         * lock on phones, which is slower and uses more battery.
+         */
+        enableHighAccuracy: false,
         timeout: 10000,
         maximumAge: 5 * 60 * 1000,
       }
@@ -99,16 +104,17 @@ function getLocationName(address, displayName = '') {
   if (!address && displayName) {
     return displayName.split(',')[0].trim();
   }
-  console.log(address)
 
   const locality =
-    address?.road ||
     address?.town ||
     address?.city ||
     address?.village ||
+    address?.hamlet ||
+    address?.region ||
     address?.municipality ||
     address?.suburb ||
-    address?.neighbourhood;
+    address?.neighbourhood ||
+    address?.road;
 
   let county = address?.county;
 
@@ -149,16 +155,49 @@ async function reverseGeocode(lat, lon, signal) {
   return getLocationName(data.address, data.display_name);
 }
 
+/*
+ * `includes` already matches "county antrim" and friends,
+ * so the short names are enough.
+ */
+const NI_COUNTIES = [
+  'antrim',
+  'armagh',
+  'down',
+  'fermanagh',
+  'londonderry',
+  'derry',
+  'tyrone',
+];
+
+/* Republic of Ireland, or Northern Ireland within the UK results */
+function isIrishResult(item) {
+  const countryCode = item.address?.country_code?.toLowerCase();
+  const county = item.address?.county?.toLowerCase() || '';
+  const state = item.address?.state?.toLowerCase() || '';
+
+  if (countryCode === 'ie') {
+    return true;
+  }
+
+  if (countryCode === 'gb' || countryCode === 'uk') {
+    return (
+      state.includes('northern ireland') ||
+      NI_COUNTIES.some((niCounty) => county.includes(niCounty))
+    );
+  }
+
+  return false;
+}
+
 export function WeatherProvider({ children }) {
   /*
-   * Read the saved location synchronously.
+   * Read the saved location synchronously, once.
    *
    * This means a returning user immediately has coordinates
    * available without waiting for browser geolocation.
+   * (Lazy initial state, so localStorage isn't parsed on every render.)
    */
-  const savedLocation = useRef(
-    getSavedLocation()
-  ).current;
+  const [savedLocation] = useState(getSavedLocation);
 
   const [coords, setCoords] = useState(() => {
     if (!savedLocation) {
@@ -234,14 +273,9 @@ export function WeatherProvider({ children }) {
          * Location was denied/unavailable.
          * Use fallback coordinates.
          */
-        const fallback = {
-          ...FALLBACK_COORDS,
-          name: null,
-        };
-
         setCoords({
-          lat: fallback.lat,
-          lon: fallback.lon,
+          lat: FALLBACK_COORDS.lat,
+          lon: FALLBACK_COORDS.lon,
         });
       });
   }, [coords]);
@@ -416,138 +450,96 @@ export function WeatherProvider({ children }) {
     };
   }, [coords]);
 
-  const requestLocation = async () => {
+  /* =======================================================
+     Location actions
+
+     Both THROW on failure when the caller asks for it, so the
+     search bar can show the problem inline while the current
+     forecast stays on screen.
+  ======================================================== */
+
+  const requestLocation = async ({ throwOnError = false } = {}) => {
+    let position;
+
+    // Don't flip `loading` yet: the page shouldn't go blank while the browser
+    // is showing its permission prompt.
     try {
-      setLoading(true);
-      setError(null);
-
-      const position =
-        await getCurrentPosition();
-
-      const newLocation = {
-        lat: position.coords.latitude,
-        lon: position.coords.longitude,
-        name: null,
-      };
-
-      saveLocation(newLocation);
-
-      setLocationName('Locating...');
-
-      setCoords({
-        lat: newLocation.lat,
-        lon: newLocation.lon,
-      });
+      position = await getCurrentPosition();
     } catch {
-      setError(
-        'Unable to determine your current location.'
-      );
+      const message = 'Unable to determine your current location. Check your browser’s location permission.';
 
+      // Called from the search bar: report inline and keep the current forecast
+      if (throwOnError) throw new Error(message);
+
+      // Called from the error screen: nothing to show, so use the global error
+      setError(message);
       setLoading(false);
-    }
-  };
-
-  const searchLocation = async (query) => {
-    if (!query?.trim()) {
       return;
     }
 
-    try {
-      setLoading(true);
-      setError(null);
+    const newLocation = {
+      lat: position.coords.latitude,
+      lon: position.coords.longitude,
+      name: null,
+    };
 
-      // Restrict Nominatim search strictly to IE (Republic of Ireland) & GB (UK / Northern Ireland)
-      // Request limit=5 so we can filter out non-NI UK locations if necessary
+    saveLocation(newLocation);
+
+    setError(null);
+    setLoading(true);
+    setLocationName('Locating...');
+    setCoords({ lat: newLocation.lat, lon: newLocation.lon });
+  };
+
+  const searchLocation = async (query) => {
+    const trimmed = query?.trim();
+
+    if (!trimmed) {
+      return;
+    }
+
+    let results;
+
+    try {
+      // Restrict Nominatim to IE and GB, then filter GB down to Northern Ireland.
+      // limit=10 so non-NI UK matches can't push every Irish match out of the list.
       const response = await fetch(
         `https://nominatim.openstreetmap.org/search?format=json&addressdetails=1&countrycodes=ie,gb&q=${encodeURIComponent(
-          query.trim()
-        )}&limit=5`,
-        {
-          headers: {
-            'User-Agent': 'EireWeatherApp/1.0',
-          },
-        }
+          trimmed
+        )}&limit=10`
       );
 
       if (!response.ok) {
-        throw new Error('Failed to search location');
+        throw new Error(`Nominatim responded with ${response.status}`);
       }
 
-      const data = await response.json();
-
-      if (!data?.length) {
-        setError(`No location found in Ireland or Northern Ireland for "${query}"`);
-        setLoading(false);
-        return;
-      }
-
-      // Valid Northern Ireland counties list to ensure UK results stay within NI
-      const niCounties = [
-        'antrim',
-        'armagh',
-        'down',
-        'fermanagh',
-        'londonderry',
-        'derry',
-        'tyrone',
-        'county antrim',
-        'county armagh',
-        'county down',
-        'county fermanagh',
-        'county londonderry',
-        'county derry',
-        'county tyrone'
-      ];
-
-      // Find the first result that is either in the Republic of Ireland (IE) or in Northern Ireland
-      const filteredResult = data.find((item) => {
-        const countryCode = item.address?.country_code?.toLowerCase();
-        const county = item.address?.county?.toLowerCase() || '';
-        const state = item.address?.state?.toLowerCase() || '';
-        
-        // Match Republic of Ireland
-        if (countryCode === 'ie') {
-          return true;
-        }
-
-        // Match Northern Ireland within UK results
-        if (countryCode === 'gb' || countryCode === 'uk') {
-          return (
-            state.includes('northern ireland') ||
-            niCounties.some((niCounty) => county.includes(niCounty))
-          );
-        }
-
-        return false;
-      });
-      if (!filteredResult) {
-        setError(`No matches found in Ireland or Northern Ireland for "${query}"`);
-        setLoading(false);
-        return;
-      }
-
-      const name = getLocationName(filteredResult.address, filteredResult.display_name);
-
-      const newLocation = {
-        lat: parseFloat(filteredResult.lat),
-        lon: parseFloat(filteredResult.lon),
-        name: name
-      };
-
-      saveLocation(newLocation);
-      setLocationName(newLocation.name);
-      setCoords({
-        lat: newLocation.lat,
-        lon: newLocation.lon,
-      });
-
-    } catch (err) {
-      setError(
-        'Failed to search location. Please try again.'
-      );
-
-      setLoading(false);
+      results = await response.json();
+    } catch {
+      throw new Error('Search is unavailable right now. Please try again.');
     }
+
+    const match = results?.find(isIrishResult);
+
+    if (!match) {
+      throw new Error(`Couldn’t find “${trimmed}” in Ireland.`);
+    }
+
+    // 2) Only now that the location is valid do we replace the forecast
+    const newLocation = {
+      lat: parseFloat(match.lat),
+      lon: parseFloat(match.lon),
+      name: getLocationName(match.address, match.display_name),
+    };
+
+    saveLocation(newLocation);
+
+    setError(null);
+    setLoading(true);
+    setLocationName(newLocation.name);
+    setCoords({
+      lat: newLocation.lat,
+      lon: newLocation.lon,
+    });
   };
 
   /**
