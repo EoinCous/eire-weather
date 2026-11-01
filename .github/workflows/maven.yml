@@ -1,17 +1,30 @@
-steps:
-  - uses: actions/checkout@v4
-  
-  - name: Set up JDK
-    uses: actions/setup-java@v4
-    with:
-      distribution: 'temurin'
-      java-version: '17'
-      cache: 'maven'
+name: Build and Deploy Spring Boot to AWS EC2
 
-  # Run tests and package on the host runner safely
-  - name: Build and Test with Maven
-    run: ./mvnw clean package -DskipTests
+on:
+  push:
+    branches: [ "main" ]
+    paths:
+      - 'backend/**'
+      - '.github/workflows/maven.yml'
 
-  # Build the lightweight Docker image using the pre-compiled JAR
-  - name: Build Docker Image
-    run: docker build -t eire-weather-backend:latest .
+jobs:
+  build-and-deploy:
+    runs-on: self-hosted
+
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Set up JDK
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+          cache: 'maven'
+
+      # Run tests and package on the host runner safely
+      - name: Build and Test with Maven
+        run: ./mvnw clean package -DskipTests
+
+      # Build the lightweight Docker image using the pre-compiled JAR
+      - name: Build Docker Image
+        run: docker build -t eire-weather-backend:latest .
