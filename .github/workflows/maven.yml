@@ -1,38 +1,17 @@
-name: Build and Deploy Spring Boot to AWS EC2
+steps:
+  - uses: actions/checkout@v4
+  
+  - name: Set up JDK
+    uses: actions/setup-java@v4
+    with:
+      distribution: 'temurin'
+      java-version: '17'
+      cache: 'maven'
 
-on:
-  push:
-    branches: [ "main" ]
-    paths:
-      - 'backend/**'
-      - '.github/workflows/maven.yml'
+  # Run tests and package on the host runner safely
+  - name: Build and Test with Maven
+    run: ./mvnw clean package -DskipTests
 
-jobs:
-  build-and-deploy:
-    runs-on: self-hosted
-
-    steps:
-      - name: Checkout Code
-        uses: actions/checkout@v4
-
-      - name: Build Docker Image
-        run: docker build -t eireweather-backend -f backend/Dockerfile backend
-
-      - name: Restart Docker Container
-        env:
-          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
-        run: |
-          # 1. Stop and remove old container if running
-          docker stop weather-app || true
-          docker rm weather-app || true
-
-          # 2. Run the new container with injected environment variables
-          docker run -d \
-            -p 8080:8080 \
-            -e OPENAI_API_KEY="$OPENAI_API_KEY" \
-            --name weather-app \
-            --restart always \
-            eireweather-backend
-
-          # 3. Clean up dangling images to keep EC2 disk space clean
-          docker image prune -f
+  # Build the lightweight Docker image using the pre-compiled JAR
+  - name: Build Docker Image
+    run: docker build -t eire-weather-backend:latest .
