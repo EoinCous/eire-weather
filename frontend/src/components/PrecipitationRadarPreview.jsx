@@ -1,7 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import L from 'leaflet';
 import { useNavigate } from 'react-router-dom';
-import { Maximize2 } from 'lucide-react';
 
 export default function PrecipitationRadarPreview() {
   const mapRef = useRef(null);
@@ -13,35 +11,36 @@ export default function PrecipitationRadarPreview() {
   const [radarTime, setRadarTime] = useState('');
 
   useEffect(() => {
-    // 1. Initialize Non-Interactive Preview Map
-    if (!mapInstanceRef.current) {
-      const irelandBounds = L.latLngBounds(
-        L.latLng(51.0, -11.0),
-        L.latLng(55.8, -5.0)
-      );
+    let cancelled = false;
 
-      mapInstanceRef.current = L.map(mapRef.current, {
-        zoomControl: false,
-        attributionControl: false,
-        dragging: false,
-        touchZoom: false,
-        doubleClickZoom: false,
-        scrollWheelZoom: false,
-        boxZoom: false,
-        keyboard: false,
-        maxBounds: irelandBounds,
-      }).setView([53.4129, -8.2439], 6);
-
-      L.tileLayer('https://tiles.stadiamaps.com/tiles/alidade_smooth_dark/{z}/{x}/{y}{r}.png', {
-        maxZoom: 12,
-        minZoom: 6,
-        attribution: '&copy; Stadia Maps'
-      }).addTo(mapInstanceRef.current);
-    }
-
-    // 2. Fetch Latest RainViewer Frame with sessionStorage Caching
-    async function loadLatestFrame() {
+    async function initializeMapAndLoadFrame() {
       try {
+        const { default: L } = await import('leaflet');
+        if (cancelled) return;
+
+        const irelandBounds = L.latLngBounds(
+          L.latLng(51.0, -11.0),
+          L.latLng(55.8, -5.0)
+        );
+
+        mapInstanceRef.current = L.map(mapRef.current, {
+          zoomControl: false,
+          attributionControl: false,
+          dragging: false,
+          touchZoom: false,
+          doubleClickZoom: false,
+          scrollWheelZoom: false,
+          boxZoom: false,
+          keyboard: false,
+          maxBounds: irelandBounds,
+        }).setView([53.4129, -8.2439], 6);
+
+        L.tileLayer('https://tiles.stadiamaps.com/tiles/alidade_smooth_dark/{z}/{x}/{y}{r}.png', {
+          maxZoom: 12,
+          minZoom: 6,
+          attribution: '&copy; Stadia Maps'
+        }).addTo(mapInstanceRef.current);
+
         const CACHE_KEY = 'eire_weather_rainviewer_cache';
         const CACHE_TIME_KEY = 'eire_weather_rainviewer_time';
         const FIVE_MINUTES = 5 * 60 * 1000;
@@ -56,10 +55,13 @@ export default function PrecipitationRadarPreview() {
         } else {
           const response = await fetch('https://api.rainviewer.com/public/weather-maps.json');
           data = await response.json();
-          
+
+          if (cancelled) return;
           sessionStorage.setItem(CACHE_KEY, JSON.stringify(data));
           sessionStorage.setItem(CACHE_TIME_KEY, Date.now().toString());
         }
+
+        if (cancelled) return;
 
         if (data && data.radar && data.radar.past && data.radar.past.length > 0) {
           const host = data.host;
@@ -82,15 +84,20 @@ export default function PrecipitationRadarPreview() {
           }).addTo(mapInstanceRef.current);
         }
       } catch (error) {
-        console.error('Failed to load radar preview:', error);
+        if (!cancelled) {
+          console.error('Failed to load radar preview:', error);
+        }
       } finally {
-        setLoading(false);
+        if (!cancelled) {
+          setLoading(false);
+        }
       }
     }
 
-    loadLatestFrame();
+    initializeMapAndLoadFrame();
 
     return () => {
+      cancelled = true;
       if (mapInstanceRef.current) {
         mapInstanceRef.current.remove();
         mapInstanceRef.current = null;

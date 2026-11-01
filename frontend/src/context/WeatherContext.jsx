@@ -19,6 +19,39 @@ const FALLBACK_COORDS = {
   lon: -7.9061,
 };
 
+function isValidCoordinates(lat, lon) {
+  return (
+    Number.isFinite(lat) &&
+    Number.isFinite(lon) &&
+    lat >= -90 &&
+    lat <= 90 &&
+    lon >= -180 &&
+    lon <= 180
+  );
+}
+
+function parseCoordinate(value) {
+  if (
+    (typeof value !== 'number' && typeof value !== 'string') ||
+    (typeof value === 'string' && !value.trim())
+  ) {
+    return null;
+  }
+
+  const coordinate = Number(value);
+  return Number.isFinite(coordinate) ? coordinate : null;
+}
+
+function getPositionCoordinates(position) {
+  const { latitude, longitude } = position?.coords ?? {};
+
+  if (!isValidCoordinates(latitude, longitude)) {
+    throw new Error('Geolocation returned invalid coordinates.');
+  }
+
+  return { latitude, longitude };
+}
+
 /* =========================================================
    Local storage helpers
 ========================================================= */
@@ -36,8 +69,9 @@ function getSavedLocation() {
     const parsed = JSON.parse(saved);
 
     if (
-      typeof parsed.lat !== 'number' ||
-      typeof parsed.lon !== 'number'
+      !parsed ||
+      typeof parsed !== 'object' ||
+      !isValidCoordinates(parsed.lat, parsed.lon)
     ) {
       return null;
     }
@@ -45,7 +79,7 @@ function getSavedLocation() {
     return {
       lat: parsed.lat,
       lon: parsed.lon,
-      name: parsed.name || null,
+      name: typeof parsed.name === 'string' ? parsed.name : null,
     };
   } catch {
     return null;
@@ -116,7 +150,7 @@ function getLocationName(address, displayName = '') {
     address?.neighbourhood ||
     address?.road;
 
-  let county = address?.county;
+  let county = typeof address?.county === 'string' ? address.county : '';
 
   if (county && !county.toLowerCase().startsWith('county') && !county.toLowerCase().startsWith('co.')) {
     county = `Co. ${county}`;
@@ -171,9 +205,19 @@ const NI_COUNTIES = [
 
 /* Republic of Ireland, or Northern Ireland within the UK results */
 function isIrishResult(item) {
-  const countryCode = item.address?.country_code?.toLowerCase();
-  const county = item.address?.county?.toLowerCase() || '';
-  const state = item.address?.state?.toLowerCase() || '';
+  const address = item?.address;
+  const countryCode =
+    typeof address?.country_code === 'string'
+      ? address.country_code.toLowerCase()
+      : '';
+  const county =
+    typeof address?.county === 'string'
+      ? address.county.toLowerCase()
+      : '';
+  const state =
+    typeof address?.state === 'string'
+      ? address.state.toLowerCase()
+      : '';
 
   if (countryCode === 'ie') {
     return true;
@@ -253,9 +297,11 @@ export function WeatherProvider({ children }) {
 
     getCurrentPosition()
       .then((position) => {
+        const { latitude, longitude } = getPositionCoordinates(position);
+
         const newLocation = {
-          lat: position.coords.latitude,
-          lon: position.coords.longitude,
+          lat: latitude,
+          lon: longitude,
           name: null,
         };
 
@@ -312,14 +358,16 @@ export function WeatherProvider({ children }) {
 
         const data = await response.json();
 
-        setWeather(data);
+        if (!controller.signal.aborted) {
+          setWeather(data);
+        }
       } catch (err) {
-        if (err.name === 'AbortError') {
+        if (controller.signal.aborted || err?.name === 'AbortError') {
           return;
         }
 
         setError(
-          err.message ||
+          err?.message ||
             'Error loading weather data'
         );
       } finally {
@@ -369,7 +417,7 @@ export function WeatherProvider({ children }) {
             : []
         );
       } catch (err) {
-        if (err.name === 'AbortError') {
+        if (controller.signal.aborted || err?.name === 'AbortError') {
           return;
         }
 
@@ -406,7 +454,6 @@ export function WeatherProvider({ children }) {
       saved.name;
 
     if (isSameSavedLocation) {
-      setLocationName(saved.name);
       return;
     }
 
@@ -433,7 +480,7 @@ export function WeatherProvider({ children }) {
           name,
         });
       } catch (err) {
-        if (err.name === 'AbortError') {
+        if (controller.signal.aborted || err?.name === 'AbortError') {
           return;
         }
 
@@ -459,12 +506,13 @@ export function WeatherProvider({ children }) {
   ======================================================== */
 
   const requestLocation = async ({ throwOnError = false } = {}) => {
-    let position;
+    let coordinates;
 
     // Don't flip `loading` yet: the page shouldn't go blank while the browser
     // is showing its permission prompt.
     try {
-      position = await getCurrentPosition();
+      const position = await getCurrentPosition();
+      coordinates = getPositionCoordinates(position);
     } catch {
       const message = 'Unable to determine your current location. Check your browser’s location permission.';
 
@@ -478,8 +526,8 @@ export function WeatherProvider({ children }) {
     }
 
     const newLocation = {
-      lat: position.coords.latitude,
-      lon: position.coords.longitude,
+      lat: coordinates.latitude,
+      lon: coordinates.longitude,
       name: null,
     };
 
@@ -514,11 +562,23 @@ export function WeatherProvider({ children }) {
       }
 
       results = await response.json();
+      if (!Array.isArray(results)) {
+        throw new Error('Nominatim returned an invalid response');
+      }
     } catch {
       throw new Error('Search is unavailable right now. Please try again.');
     }
 
-    const match = results?.find(isIrishResult);
+    const match = results.find((item) => {
+      if (!isIrishResult(item)) {
+        return false;
+      }
+
+      return isValidCoordinates(
+        parseCoordinate(item.lat),
+        parseCoordinate(item.lon)
+      );
+    });
 
     if (!match) {
       throw new Error(`Couldn’t find “${trimmed}” in Ireland.`);
@@ -526,8 +586,8 @@ export function WeatherProvider({ children }) {
 
     // 2) Only now that the location is valid do we replace the forecast
     const newLocation = {
-      lat: parseFloat(match.lat),
-      lon: parseFloat(match.lon),
+      lat: parseCoordinate(match.lat),
+      lon: parseCoordinate(match.lon),
       name: getLocationName(match.address, match.display_name),
     };
 

@@ -1,7 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
-import L from 'leaflet';
 import { useNavigate } from 'react-router-dom';
-import { ArrowLeft, Play, Pause, RotateCcw } from 'lucide-react';
+import { ArrowLeft, Play, Pause } from 'lucide-react';
 
 export default function PrecipitationRadar() {
   const navigate = useNavigate();
@@ -16,28 +15,31 @@ export default function PrecipitationRadar() {
 
   // 1. Initialize Fullscreen Map & Load RainViewer Frames with Caching
   useEffect(() => {
-    if (!mapInstanceRef.current) {
-      const irelandBounds = L.latLngBounds(
-        L.latLng(51.0, -11.0),
-        L.latLng(55.8, -5.0)
-      );
+    let cancelled = false;
 
-      mapInstanceRef.current = L.map(mapRef.current, {
-        zoomControl: false,
-        attributionControl: false,
-        maxBounds: irelandBounds,
-        maxBoundsViscosity: 0.8,
-      }).setView([53.4129, -8.2439], 7);
-
-      L.tileLayer('https://tiles.stadiamaps.com/tiles/alidade_smooth_dark/{z}/{x}/{y}{r}.png', {
-        maxZoom: 12,
-        minZoom: 6,
-        attribution: '&copy; <a href="https://stadiamaps.com/">Stadia Maps</a>'
-      }).addTo(mapInstanceRef.current);
-    }
-
-    async function loadRadarFrames() {
+    async function initializeMapAndLoadFrames() {
       try {
+        const { default: L } = await import('leaflet');
+        if (cancelled) return;
+
+        const irelandBounds = L.latLngBounds(
+          L.latLng(51.0, -11.0),
+          L.latLng(55.8, -5.0)
+        );
+
+        mapInstanceRef.current = L.map(mapRef.current, {
+          zoomControl: false,
+          attributionControl: false,
+          maxBounds: irelandBounds,
+          maxBoundsViscosity: 0.8,
+        }).setView([53.4129, -8.2439], 7);
+
+        L.tileLayer('https://tiles.stadiamaps.com/tiles/alidade_smooth_dark/{z}/{x}/{y}{r}.png', {
+          maxZoom: 12,
+          minZoom: 6,
+          attribution: '&copy; <a href="https://stadiamaps.com/">Stadia Maps</a>'
+        }).addTo(mapInstanceRef.current);
+
         const CACHE_KEY = 'eire_weather_rainviewer_cache';
         const CACHE_TIME_KEY = 'eire_weather_rainviewer_time';
         const FIVE_MINUTES = 5 * 60 * 1000;
@@ -52,10 +54,13 @@ export default function PrecipitationRadar() {
         } else {
           const response = await fetch('https://api.rainviewer.com/public/weather-maps.json');
           data = await response.json();
-          
+
+          if (cancelled) return;
           sessionStorage.setItem(CACHE_KEY, JSON.stringify(data));
           sessionStorage.setItem(CACHE_TIME_KEY, Date.now().toString());
         }
+
+        if (cancelled) return;
 
         if (data && data.radar && data.radar.past && data.radar.past.length > 0) {
           const host = data.host;
@@ -88,15 +93,20 @@ export default function PrecipitationRadar() {
           setCurrentIndex(pastFrames.length - 1);
         }
       } catch (error) {
-        console.error('Failed to load radar timeline:', error);
+        if (!cancelled) {
+          console.error('Failed to load radar timeline:', error);
+        }
       } finally {
-        setLoading(false);
+        if (!cancelled) {
+          setLoading(false);
+        }
       }
     }
 
-    loadRadarFrames();
+    initializeMapAndLoadFrames();
 
     return () => {
+      cancelled = true;
       // Cleanup layers and map on unmount
       Object.values(radarLayersRef.current).forEach((layer) => {
         if (mapInstanceRef.current) {

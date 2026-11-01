@@ -4,6 +4,36 @@ import { useNavigate } from 'react-router-dom';
 import { useWeather } from '../context/WeatherContext';
 import { WeatherIcon } from './WeatherIcon';
 
+const TIME_ZONE = 'Europe/Dublin';
+
+const dayKeyFormatter = new Intl.DateTimeFormat('en-CA', {
+  timeZone: TIME_ZONE,
+  year: 'numeric',
+  month: '2-digit',
+  day: '2-digit',
+});
+
+const hourFormatter = new Intl.DateTimeFormat('en-GB', {
+  timeZone: TIME_ZONE,
+  hour: 'numeric',
+  hourCycle: 'h23',
+});
+
+const weekdayFormatter = new Intl.DateTimeFormat('en-IE', {
+  timeZone: 'UTC',
+  weekday: 'short',
+});
+
+const dateFormatter = new Intl.DateTimeFormat('en-IE', {
+  timeZone: 'UTC',
+  month: 'short',
+  day: 'numeric',
+});
+
+const dayKeyOf = (timestamp) => dayKeyFormatter.format(new Date(timestamp));
+const hourOf = (timestamp) => Number(hourFormatter.format(new Date(timestamp)));
+const dateForDayKey = (dayKey) => new Date(`${dayKey}T12:00:00Z`);
+
 export default function DailyForecast({ hourlyForecasts }) {
   const navigate = useNavigate();
   const { fetchAiSummary } = useWeather();
@@ -33,13 +63,12 @@ export default function DailyForecast({ hourlyForecasts }) {
   const daysMap = {};
 
   hourlyForecasts.forEach((item) => {
-    const date = new Date(item.timestamp);
-    const dateKey = date.toISOString().split('T')[0];
+    const dateKey = dayKeyOf(item.timestamp);
 
     if (!daysMap[dateKey]) {
       daysMap[dateKey] = {
         dateKey, // Store the key for routing
-        date,
+        date: dateForDayKey(dateKey),
         temps: [],
         rain: 0,
         middaySymbol: item.weatherSymbol,
@@ -50,7 +79,7 @@ export default function DailyForecast({ hourlyForecasts }) {
     if (item.precipitationMm != null) daysMap[dateKey].rain += item.precipitationMm;
 
     // Pick midday symbol (approx 13:00) for representative daily condition
-    const hour = date.getHours();
+    const hour = hourOf(item.timestamp);
     if (hour >= 11 && hour <= 14) {
       daysMap[dateKey].middaySymbol = item.weatherSymbol;
     }
@@ -59,8 +88,8 @@ export default function DailyForecast({ hourlyForecasts }) {
   // Transform grouped days into formatted array (up to 10 days)
   const dailyList = Object.values(daysMap).slice(0, 10).map((day, idx) => ({
     dateKey: day.dateKey,
-    dayName: idx === 0 ? 'Today' : day.date.toLocaleDateString('en-IE', { weekday: 'short' }),
-    dateStr: day.date.toLocaleDateString('en-IE', { month: 'short', day: 'numeric' }),
+    dayName: idx === 0 ? 'Today' : weekdayFormatter.format(day.date),
+    dateStr: dateFormatter.format(day.date),
     minTemp: Math.round(Math.min(...day.temps)),
     maxTemp: Math.round(Math.max(...day.temps)),
     totalRain: Math.round(day.rain * 10) / 10,
@@ -72,8 +101,9 @@ export default function DailyForecast({ hourlyForecasts }) {
   const tempRange = globalMax - globalMin || 1;
 
   const handleDayClick = (day) => {
-    // Filter the original hourly data for just this day
-    const dayHourlyData = hourlyForecasts.filter(h => h.timestamp.startsWith(day.dateKey));
+    const dayHourlyData = hourlyForecasts.filter(
+      (item) => dayKeyOf(item.timestamp) === day.dateKey
+    );
     
     // Navigate to the detail page, passing the data in state
     navigate(`/day/${day.dateKey}`, { 
