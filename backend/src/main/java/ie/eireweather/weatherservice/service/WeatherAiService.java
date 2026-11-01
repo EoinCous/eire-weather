@@ -6,6 +6,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.MediaType;
 import org.springframework.stereotype.Service;
@@ -24,10 +25,17 @@ public class WeatherAiService {
     @Value("${openai.api.key}")
     private String apiKey;
 
-    private final RestClient restClient = RestClient.create();
+    private final RestClient restClient;
     private final ObjectMapper objectMapper;
 
+    @Autowired
     public WeatherAiService() {
+        this(RestClient.create(), null);
+    }
+
+    WeatherAiService(RestClient restClient, String apiKey) {
+        this.restClient = restClient;
+        this.apiKey = apiKey;
         this.objectMapper = new ObjectMapper();
         // Register JavaTimeModule so Java 8 date/time classes serialize cleanly to strings
         this.objectMapper.registerModule(new JavaTimeModule());
@@ -131,7 +139,9 @@ public class WeatherAiService {
 
             case "SINGLE_DAY" -> 
                 "You are an expert meteorological assistant for ÉireWeather. " +
-                "Provide a concise, practical breakdown for " + (targetDate != null ? targetDate : "this day") + " at this specific Irish location. " +
+                "Provide a concise, practical breakdown for " +
+                (targetDate != null && !targetDate.isBlank() ? targetDate : "this day") +
+                " at this specific Irish location. " +
                 "STRICT RULES: " +
                 "1) CHRONOLOGICAL STRUCTURE: Highlight 1) Morning/commute outlook, 2) Precise timing for rain windows or heavy showers, and 3) Afternoon temperature peaks or evening settling. " +
                 "2) PRACTICAL UTILITY: Note peak UV during midday hours (if applicable), wind direction shifts, and drying weather windows. " +

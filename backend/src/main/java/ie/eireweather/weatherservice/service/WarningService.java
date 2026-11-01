@@ -1,6 +1,7 @@
 package ie.eireweather.weatherservice.service;
 
 import ie.eireweather.weatherservice.dto.MetEireannWarningDto;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
@@ -20,11 +21,16 @@ public class WarningService {
 
     private List<MetEireannWarningDto> cachedWarnings = Collections.emptyList();
 
+    @Autowired
     public WarningService() {
-        this.restClient = RestClient.builder()
+        this(RestClient.builder()
             .defaultHeader(HttpHeaders.USER_AGENT, "EireWeatherApp/1.0")
             .defaultHeader(HttpHeaders.ACCEPT, MediaType.APPLICATION_JSON_VALUE)
-            .build();
+            .build());
+    }
+
+    WarningService(RestClient restClient) {
+        this.restClient = restClient;
     }
 
     @Scheduled(fixedRate = 600000)

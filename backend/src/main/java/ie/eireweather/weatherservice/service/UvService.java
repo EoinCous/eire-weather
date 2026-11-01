@@ -6,6 +6,8 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestClient;
 
@@ -16,8 +18,13 @@ public class UvService {
 
     private final RestClient restClient;
 
+    @Autowired
     public UvService() {
-        this.restClient = RestClient.create("https://api.open-meteo.com");
+        this(RestClient.create("https://api.open-meteo.com"));
+    }
+
+    UvService(RestClient restClient) {
+        this.restClient = restClient;
     }
 
     public Map<Instant, Double> getHourlyUvForecast(double lat, double lon) {

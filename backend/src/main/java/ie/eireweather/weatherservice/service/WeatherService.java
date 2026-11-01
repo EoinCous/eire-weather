@@ -1,6 +1,7 @@
 package ie.eireweather.weatherservice.service;
 
 import org.springframework.cache.annotation.Cacheable;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.http.client.HttpComponentsClientHttpRequestFactory;
@@ -29,9 +30,9 @@ public class WeatherService {
     private static final String MET_EIREANN_API_URL = "http://openaccess.pf.api.met.ie/metno-wdb2ts/locationforecast?lat=%.4f;long=%.4f";
     private static final String USER_AGENT_VALUE = "EireWeatherApp/1.0";
 
+    @Autowired
     public WeatherService(OpenMeteoService openMeteoService) {
-        this.openMeteoService = openMeteoService;
-        this.restClient = RestClient.builder()
+        this(openMeteoService, RestClient.builder()
             .requestFactory(new HttpComponentsClientHttpRequestFactory())
             .defaultHeader(HttpHeaders.USER_AGENT, USER_AGENT_VALUE)
             .defaultHeader(HttpHeaders.ACCEPT, MediaType.APPLICATION_XML_VALUE)
@@ -39,7 +40,12 @@ public class WeatherService {
                 request.getHeaders().remove(HttpHeaders.CONTENT_LENGTH);
                 return execution.execute(request, body);
             })
-            .build();
+            .build());
+    }
+
+    WeatherService(OpenMeteoService openMeteoService, RestClient restClient) {
+        this.openMeteoService = openMeteoService;
+        this.restClient = restClient;
     }
 
     @Cacheable(value = "forecasts", key = "#lat + '-' + #lon")
