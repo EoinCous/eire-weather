@@ -10,6 +10,10 @@ on:
 jobs:
   build-and-deploy:
     runs-on: self-hosted
+    
+    defaults:
+      run:
+        working-directory: ./backend 
 
     steps:
       - uses: actions/checkout@v4
@@ -21,10 +25,14 @@ jobs:
           java-version: '17'
           cache: 'maven'
 
-      # Run tests and package on the host runner safely
-      - name: Build and Test with Maven
+      - name: Build and Package
         run: ./mvnw clean package -DskipTests
 
-      # Build the lightweight Docker image using the pre-compiled JAR
       - name: Build Docker Image
         run: docker build -t eire-weather-backend:latest .
+
+      - name: Restart Docker Container
+        run: |
+          docker stop eire-weather-app || true
+          docker rm eire-weather-app || true
+          docker run -d --name eire-weather-app -p 8080:8080 eire-weather-backend:latest
