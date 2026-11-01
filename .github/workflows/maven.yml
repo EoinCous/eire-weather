@@ -37,5 +37,5 @@ jobs:
       - name: Restart Docker Container
         run: |
           docker stop eire-weather-app || true
-          docker rm eire-weather-app || true
+          docker rm -f eire-weather-app || true
           docker run -d --name eire-weather-app -p 8080:8080 eire-weather-backend:latest
