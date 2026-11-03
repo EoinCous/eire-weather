@@ -38,4 +38,8 @@ jobs:
         run: |
           docker stop eire-weather-app || true
           docker rm -f eire-weather-app || true
-          docker run -d --name eire-weather-app -p 8080:8080 eire-weather-backend:latest
+          docker run -d \
+            --name eire-weather-app \
+            -p 8080:8080 \
+            -e OPENAI_API_KEY="${{ secrets.OPENAI_API_KEY }}" \
+            eire-weather-backend:latest
