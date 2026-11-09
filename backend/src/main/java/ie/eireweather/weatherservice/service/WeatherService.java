@@ -1,5 +1,6 @@
 package ie.eireweather.weatherservice.service;
 
+import org.springframework.cache.annotation.CachePut;
 import org.springframework.cache.annotation.Cacheable;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpHeaders;
@@ -50,6 +51,15 @@ public class WeatherService {
 
     @Cacheable(value = "forecasts", key = "#lat + '-' + #lon")
     public WeatherResponse getForecast(double lat, double lon) {
+        return fetchForecast(lat, lon);
+    }
+
+    @CachePut(value = "forecasts", key = "#lat + '-' + #lon")
+    public WeatherResponse refreshForecast(double lat, double lon) {
+        return fetchForecast(lat, lon);
+    }
+
+    private WeatherResponse fetchForecast(double lat, double lon) {
         if (lat < -90.0 || lat > 90.0 || lon < -180.0 || lon > 180.0) {
             throw new IllegalArgumentException("Latitude must be between -90 and 90, and longitude between -180 and 180.");
         }
