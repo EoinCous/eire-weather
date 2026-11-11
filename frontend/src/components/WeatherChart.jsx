@@ -83,6 +83,14 @@ function CustomTooltip({ active, payload }) {
             {point.rain >= WET_THRESHOLD_MM ? `${point.rain.toFixed(1)} mm` : 'Dry'}
           </span>
         </div>
+        {point.rain >= WET_THRESHOLD_MM && point.rainProbability != null && (
+          <div className="flex items-center justify-between gap-6">
+            <span className="text-xs text-slate-400">Rain probability</span>
+            <span className="text-sm font-bold text-slate-100">
+              {Math.round(point.rainProbability)}%
+            </span>
+          </div>
+        )}
       </div>
     </div>
   );
@@ -114,6 +122,8 @@ export default function WeatherChart({ hourlyForecasts, WeatherIcon }) {
         label: sameDay ? time : `${formatWeekday(item.timestamp)} ${time}`,
         temp: item.temperatureC != null ? Math.round(item.temperatureC) : null,
         rain: item.precipitationMm != null ? Number(item.precipitationMm) : 0,
+        rainProbability:
+          item.precipitationProbability != null ? Number(item.precipitationProbability) : null,
         weatherSymbol: item.weatherSymbol,
       };
     });
@@ -212,13 +222,16 @@ export default function WeatherChart({ hourlyForecasts, WeatherIcon }) {
                   {slot.temp != null ? `${slot.temp}°` : '—'}
                 </span>
 
-                <span
-                  className={`text-[11px] ${
-                    slot.rain >= WET_THRESHOLD_MM ? 'text-cyan-400 font-medium' : 'text-slate-600'
-                  }`}
-                >
-                  {slot.rain >= WET_THRESHOLD_MM ? `${slot.rain.toFixed(1)} mm` : 'Dry'}
-                </span>
+                {slot.rain >= WET_THRESHOLD_MM ? (
+                  <span className="flex flex-col items-center text-[11px]">
+                    <span className="font-medium text-cyan-400">{slot.rain.toFixed(1)} mm</span>
+                    {slot.rainProbability != null && (
+                      <span className="text-cyan-200/70">{Math.round(slot.rainProbability)}% chance</span>
+                    )}
+                  </span>
+                ) : (
+                  <span className="text-[11px] text-slate-600">Dry</span>
+                )}
               </div>
             );
           })}

@@ -151,6 +151,7 @@ function toRow(item) {
     symbol: item.weatherSymbol,
     temp,
     rain: toNumber(item.precipitationMm),
+    rainProbability: toNumber(item.precipitationProbability),
     wind: toNumber(item.windSpeedMps),
     windDirection: item.windDirection || null,
     uv: toNumber(item.uvIndex),
@@ -339,6 +340,11 @@ function HourRow({ row, index, isOpen, onToggle, rainScale }) {
           <span className={`block text-xs tabular-nums ${isWet ? 'font-medium text-cyan-400' : 'text-slate-600'}`}>
             {isWet ? `${row.rain.toFixed(1)} mm` : 'Dry'}
           </span>
+          {isWet && row.rainProbability != null && (
+            <span className="mt-0.5 block text-[11px] text-cyan-200/70 tabular-nums">
+              {Math.round(row.rainProbability)}% chance
+            </span>
+          )}
           <span className="mt-1 block h-1.5 overflow-hidden rounded-full bg-slate-800/80">
             <span className="block h-full rounded-full bg-cyan-400/80" style={{ width: `${rainWidth}%` }} />
           </span>
