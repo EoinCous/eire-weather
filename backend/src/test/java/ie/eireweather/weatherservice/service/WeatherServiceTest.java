@@ -52,7 +52,7 @@ class WeatherServiceTest {
                     </time>
                     <time from="2025-01-01T10:00:00Z" to="2025-01-01T11:00:00Z">
                       <location>
-                        <precipitation value="1.2" minValue="0.5" maxValue="2.0"/>
+                        <precipitation unit="mm" value="1.2" minvalue="0.5" maxvalue="2.0" probability="44.5"/>
                         <symbol id="rain" number="5"/>
                       </location>
                     </time>
@@ -86,7 +86,9 @@ class WeatherServiceTest {
         assertEquals(65.0, first.cloudiness());
         assertEquals(3.0, first.dewpointTemperature());
         assertEquals(7.5, first.temperatureC());
+        assertNull(first.precipitationUnit());
         assertNull(first.precipitationMm());
+        assertNull(first.precipitationProbability());
         assertNull(first.weatherSymbol());
         assertEquals(4.0, first.windSpeedMps());
         assertEquals("NW", first.windDirection());
@@ -99,6 +101,8 @@ class WeatherServiceTest {
         assertEquals(1.2, response.hourlyForecasts().get(1).precipitationMm());
         assertEquals(0.5, response.hourlyForecasts().get(1).precipitationMinMm());
         assertEquals(2.0, response.hourlyForecasts().get(1).precipitationMaxMm());
+        assertEquals("mm", response.hourlyForecasts().get(1).precipitationUnit());
+        assertEquals(44.5, response.hourlyForecasts().get(1).precipitationProbability());
         assertEquals("rain", response.hourlyForecasts().get(1).weatherSymbol());
         assertEquals(0.0, response.hourlyForecasts().get(1).uvIndex());
         assertEquals(55.0, response.hourlyForecasts().get(1).airQuality());
