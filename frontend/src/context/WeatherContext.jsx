@@ -255,9 +255,6 @@ export function WeatherProvider({ children }) {
   });
 
   const [weather, setWeather] = useState(null);
-  const [lastUpdated, setLastUpdated] = useState(null);
-  const [refreshing, setRefreshing] = useState(false);
-  const refreshController = useRef(null);
 
   const [warnings, setWarnings] = useState([]);
 
@@ -363,7 +360,6 @@ export function WeatherProvider({ children }) {
 
         if (!controller.signal.aborted) {
           setWeather(data);
-          setLastUpdated(new Date().toISOString());
         }
       } catch (err) {
         if (controller.signal.aborted || err?.name === 'AbortError') {
@@ -385,7 +381,6 @@ export function WeatherProvider({ children }) {
 
     return () => {
       controller.abort();
-      refreshController.current?.abort();
     };
   }, [coords]);
 
@@ -607,39 +602,6 @@ export function WeatherProvider({ children }) {
     });
   };
 
-  const refreshWeather = async () => {
-    if (coords?.lat == null || coords?.lon == null) {
-      throw new Error('Location coordinates are missing.');
-    }
-
-    refreshController.current?.abort();
-    const controller = new AbortController();
-    refreshController.current = controller;
-    setRefreshing(true);
-
-    try {
-      const response = await fetch(
-        `${BASE_URL}/forecast?lat=${coords.lat}&lon=${coords.lon}&refresh=true`,
-        { signal: controller.signal }
-      );
-
-      if (!response.ok) {
-        throw new Error('Failed to update weather');
-      }
-
-      const data = await response.json();
-      if (!controller.signal.aborted) {
-        setWeather(data);
-        setLastUpdated(new Date().toISOString());
-      }
-    } finally {
-      if (refreshController.current === controller) {
-        refreshController.current = null;
-        setRefreshing(false);
-      }
-    }
-  };
-
   /**
    * Generalized AI summary fetcher supporting CURRENT, SINGLE_DAY, and TEN_DAY scopes.
    * 
@@ -671,14 +633,11 @@ export function WeatherProvider({ children }) {
       value={{
         coords,
         weather,
-        lastUpdated,
-        refreshing,
         warnings,
         locationName,
         loading,
         error,
         requestLocation,
-        refreshWeather,
         searchLocation,
         fetchAiSummary
       }}

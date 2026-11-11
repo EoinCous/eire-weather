@@ -1,3 +1,4 @@
+import { useEffect, useState } from 'react';
 import { useWeather } from '../context/WeatherContext';
 import { useNavigate } from 'react-router-dom';
 import { Loader2, AlertCircle } from 'lucide-react';
@@ -9,11 +10,41 @@ import SunMoonInfo from '../components/SunMoonInfo';
 import PrecipitationRadarPreview from '../components/PrecipitationRadarPreview';
 import WeatherHeader from '../components/WeatherHeader';
 
+const HOUR_MS = 60 * 60 * 1000;
+
+function getHourKey(timestamp) {
+  const time = new Date(timestamp).getTime();
+  return Number.isFinite(time) ? Math.floor(time / HOUR_MS) : null;
+}
+
 export default function WeatherDashboard() {
   const { weather, loading, error, requestLocation } = useWeather();
   const navigate = useNavigate();
+  const [currentHourKey, setCurrentHourKey] = useState(() =>
+    Math.floor(Date.now() / HOUR_MS)
+  );
 
-  const { current, hourlyForecasts } = weather ?? {};
+  const { current, hourlyForecasts: allHourlyForecasts } = weather ?? {};
+  const hourlyForecasts = allHourlyForecasts?.filter(
+    (forecast) => getHourKey(forecast.timestamp) >= currentHourKey
+  );
+  const currentConditions =
+    hourlyForecasts?.find((forecast) => getHourKey(forecast.timestamp) === currentHourKey) ??
+    current;
+
+  useEffect(() => {
+    let timeoutId;
+
+    const updateCurrentHour = () => {
+      const now = Date.now();
+      setCurrentHourKey(Math.floor(now / HOUR_MS));
+      timeoutId = setTimeout(updateCurrentHour, HOUR_MS - (now % HOUR_MS));
+    };
+
+    timeoutId = setTimeout(updateCurrentHour, HOUR_MS - (Date.now() % HOUR_MS));
+
+    return () => clearTimeout(timeoutId);
+  }, []);
 
   return (
     <div className="mx-auto max-w-4xl space-y-6">
@@ -45,7 +76,7 @@ export default function WeatherDashboard() {
         <>
           <WeatherWarnings />
 
-          <CurrentConditions current={current} />
+          <CurrentConditions current={currentConditions} />
 
           <PrecipitationRadarPreview onClick={() => navigate('/precipitation-radar')} />
 
@@ -55,7 +86,7 @@ export default function WeatherDashboard() {
           <SunMoonInfo />
 
           {/* 10-day forecast */}
-          {hourlyForecasts && <DailyForecast hourlyForecasts={hourlyForecasts} />}
+          {hourlyForecasts && <DailyForecast hourlyForecasts={allHourlyForecasts} />}
         </>
       ) : null}
     </div>

@@ -66,31 +66,9 @@ describe('WeatherProvider', () => {
     expect(result.current.coords).toEqual({ lat: savedLocation.lat, lon: savedLocation.lon });
     expect(result.current.locationName).toBe(savedLocation.name);
     expect(result.current.weather).toEqual(forecast);
-    expect(result.current.lastUpdated).toEqual(expect.any(String));
     expect(result.current.warnings).toEqual(warnings);
     expect(navigator.geolocation.getCurrentPosition).not.toHaveBeenCalled();
     expect(fetch).toHaveBeenCalledTimes(2);
-  });
-
-  it('refreshes the forecast and updates its last-updated timestamp', async () => {
-    const refreshedForecast = { current: { temperature: 18 } };
-    const { result } = renderWeather();
-
-    await waitFor(() => expect(result.current.loading).toBe(false));
-    await waitFor(() => expect(fetch).toHaveBeenCalledTimes(2));
-    fetch.mockResolvedValueOnce(response(refreshedForecast));
-
-    await act(async () => {
-      await result.current.refreshWeather();
-    });
-
-    expect(fetch).toHaveBeenLastCalledWith(
-      expect.stringContaining('/forecast?lat=53.3498&lon=-6.2603&refresh=true'),
-      expect.objectContaining({ signal: expect.any(AbortSignal) })
-    );
-    expect(result.current.weather).toEqual(refreshedForecast);
-    expect(result.current.lastUpdated).toEqual(expect.any(String));
-    expect(result.current.refreshing).toBe(false);
   });
 
   it('rejects invalid saved coordinates and falls back when geolocation fails', async () => {

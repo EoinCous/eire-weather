@@ -4,8 +4,6 @@ import { Wind, CloudRain, Sparkles, Loader2, RefreshCw, AlertCircle, ChevronDown
 import { WeatherIcon } from './WeatherIcon';
 import { useWeather } from '../context/WeatherContext';
 
-const TIME_ZONE = 'Europe/Dublin';
-
 /* ---------- helpers ---------- */
 
 function toNumber(value) {
@@ -127,9 +125,8 @@ export default function CurrentConditions({ current }) {
   const [aiSummary, setAiSummary] = useState(null);
   const [loadingAi, setLoadingAi] = useState(false);
   const [aiError, setAiError] = useState(null);
-  const [refreshError, setRefreshError] = useState(null);
   const [showDetails, setShowDetails] = useState(false);
-  const { fetchAiSummary, lastUpdated, refreshing, refreshWeather } = useWeather();
+  const { fetchAiSummary } = useWeather();
 
   if (!current) return null;
 
@@ -172,28 +169,6 @@ export default function CurrentConditions({ current }) {
     current.weatherDescription ||
     (current.weatherSymbol ? humanise(current.weatherSymbol) : 'Current conditions');
 
-  const lastUpdatedLabel = lastUpdated
-    ? new Date(lastUpdated).toLocaleString('en-IE', {
-        day: 'numeric',
-        month: 'short',
-        hour: '2-digit',
-        minute: '2-digit',
-        hour12: false,
-        timeZone: TIME_ZONE,
-      })
-    : 'Not available';
-
-  const handleRefreshWeather = async () => {
-    setRefreshError(null);
-    try {
-      await refreshWeather();
-    } catch (err) {
-      if (err?.name !== 'AbortError') {
-        setRefreshError(err.message || 'Could not update the forecast. Try again.');
-      }
-    }
-  };
-
   // Contextual heads-ups: only shown when there is something worth knowing
   const alerts = [];
   if (fogRisk.likely) {
@@ -214,26 +189,6 @@ export default function CurrentConditions({ current }) {
       {/* Ambient background */}
       <div className="pointer-events-none absolute -right-32 -top-32 h-96 w-96 rounded-full bg-blue-600/[0.08] blur-3xl" />
       <div className="pointer-events-none absolute -bottom-32 -left-32 h-80 w-80 rounded-full bg-sky-500/[0.06] blur-3xl" />
-
-      <div className="relative z-10 mb-4 flex flex-wrap items-center justify-between gap-3">
-        <p className="text-xs text-slate-400">
-          Updated <time dateTime={lastUpdated || undefined}>{lastUpdatedLabel}</time>
-        </p>
-        <button
-          type="button"
-          onClick={handleRefreshWeather}
-          disabled={refreshing}
-          className="inline-flex items-center gap-2 rounded-lg border border-slate-700 bg-slate-900/80 px-3 py-2 text-xs font-medium text-slate-200 transition-colors hover:border-blue-500/60 hover:text-white disabled:cursor-wait disabled:opacity-60 focus-visible:outline focus-visible:outline-2 focus-visible:outline-blue-400"
-        >
-          <RefreshCw className={`h-3.5 w-3.5 ${refreshing ? 'animate-spin' : ''}`} />
-          {refreshing ? 'Updating…' : 'Update'}
-        </button>
-      </div>
-      {refreshError && (
-        <p role="alert" className="relative z-10 -mt-2 mb-3 text-xs text-rose-400">
-          {refreshError}
-        </p>
-      )}
 
       {/* Hero */}
       <div className="relative z-10 flex items-center justify-between gap-4">

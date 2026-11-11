@@ -2,7 +2,6 @@ package ie.eireweather.weatherservice.controller;
 
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -39,25 +38,10 @@ class WeatherControllerTest {
         WeatherResponse response = new WeatherResponse(latitude, longitude, null, List.of());
         when(weatherService.getForecast(latitude, longitude)).thenReturn(response);
 
-        WeatherResponse result = controller.getForecast(latitude, longitude, false);
+        WeatherResponse result = controller.getForecast(latitude, longitude);
 
         assertSame(response, result);
         verify(weatherService).getForecast(latitude, longitude);
-        verify(weatherCacheService).putWeatherData("53.3498,-6.2603", response);
-    }
-
-    @Test
-    void getForecastRefreshesAndCachesWeatherWhenRequested() {
-        double latitude = 53.3498;
-        double longitude = -6.2603;
-        WeatherResponse response = new WeatherResponse(latitude, longitude, null, List.of());
-        when(weatherService.refreshForecast(latitude, longitude)).thenReturn(response);
-
-        WeatherResponse result = controller.getForecast(latitude, longitude, true);
-
-        assertSame(response, result);
-        verify(weatherService).refreshForecast(latitude, longitude);
-        verify(weatherService, never()).getForecast(latitude, longitude);
         verify(weatherCacheService).putWeatherData("53.3498,-6.2603", response);
     }
 

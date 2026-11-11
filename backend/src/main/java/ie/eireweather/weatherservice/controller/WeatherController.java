@@ -34,16 +34,10 @@ public class WeatherController {
     }
     
     @GetMapping("/forecast")
-    public WeatherResponse getForecast(
-        @RequestParam double lat,
-        @RequestParam double lon,
-        @RequestParam(defaultValue = "false") boolean refresh
-    ) {
+    public WeatherResponse getForecast(@RequestParam double lat, @RequestParam double lon) {
         String cacheKey = String.format("%.4f,%.4f", lat, lon);
 
-        WeatherResponse weatherResponse = refresh
-            ? weatherService.refreshForecast(lat, lon)
-            : weatherService.getForecast(lat, lon);
+        WeatherResponse weatherResponse = weatherService.getForecast(lat, lon);
         
         weatherCacheService.putWeatherData(cacheKey, weatherResponse);
         
