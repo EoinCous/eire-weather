@@ -86,7 +86,7 @@ export default function WeatherDashboard() {
           <SunMoonInfo />
 
           {/* 10-day forecast */}
-          {hourlyForecasts && <DailyForecast hourlyForecasts={allHourlyForecasts} />}
+          {hourlyForecasts && <DailyForecast hourlyForecasts={hourlyForecasts} />}
         </>
       ) : null}
     </div>

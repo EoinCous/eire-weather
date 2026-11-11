@@ -149,6 +149,9 @@ export default function CurrentConditions({ current }) {
   const humidity = toNumber(current.humidityPercent);
   const pressure = toNumber(current.pressureHpa);
   const rainfall = toNumber(current.precipitationMm);
+  const rainfallMin = toNumber(current.precipitationMinMm);
+  const rainfallMax = toNumber(current.precipitationMaxMm);
+  const rainfallProbability = toNumber(current.precipitationProbability);
   const cloudiness = toNumber(current.cloudiness);
   const uvIndex = toNumber(current.uvIndex);
   const airQuality = toNumber(current.airQuality);
@@ -168,6 +171,20 @@ export default function CurrentConditions({ current }) {
   const weatherDescription =
     current.weatherDescription ||
     (current.weatherSymbol ? humanise(current.weatherSymbol) : 'Current conditions');
+
+  const rainfallDetails = ['This hour'];
+  if (rainfall == null || rainfall >= 0.1 || rainfallProbability > 0) {
+    if (rainfallMin != null && rainfallMax != null) {
+      rainfallDetails.push(`range ${formatValue(rainfallMin, '', 1)}–${formatValue(rainfallMax, ' mm', 1)}`);
+    } else if (rainfallMin != null) {
+      rainfallDetails.push(`from ${formatValue(rainfallMin, ' mm', 1)}`);
+    } else if (rainfallMax != null) {
+      rainfallDetails.push(`up to ${formatValue(rainfallMax, ' mm', 1)}`);
+    }
+    if (rainfallProbability != null) {
+      rainfallDetails.push(`${formatValue(rainfallProbability, '%')} chance`);
+    }
+  }
 
   // Contextual heads-ups: only shown when there is something worth knowing
   const alerts = [];
@@ -246,7 +263,7 @@ export default function CurrentConditions({ current }) {
           iconClass="text-cyan-400"
           label="Rain"
           value={rainfall == null ? '—' : rainfall >= 0.1 ? `${formatValue(rainfall, ' mm', 1)}` : 'None'}
-          detail="This hour"
+          detail={rainfallDetails.join(' · ')}
         />
       </div>
 

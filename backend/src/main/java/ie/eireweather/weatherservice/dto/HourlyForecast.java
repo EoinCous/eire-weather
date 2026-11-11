@@ -7,7 +7,6 @@ public record HourlyForecast(
         Double cloudiness,
         Double dewpointTemperature,
         Double temperatureC,
-        String precipitationUnit,
         Double precipitationMm,
         Double precipitationMinMm,
         Double precipitationMaxMm,

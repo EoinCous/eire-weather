@@ -40,7 +40,6 @@ public record MetEireannResponseDto(
     public record WindDirection(@JacksonXmlProperty(isAttribute = true) String name) {}
     public record WindSpeed(@JacksonXmlProperty(isAttribute = true) Double mps) {}
     public record Precipitation(
-        @JacksonXmlProperty(isAttribute = true) String unit,
         @JacksonXmlProperty(isAttribute = true) Double value,
         @JacksonXmlProperty(isAttribute = true, localName = "minvalue") Double minValue,
         @JacksonXmlProperty(isAttribute = true, localName = "maxvalue") Double maxValue,

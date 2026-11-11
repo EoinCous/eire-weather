@@ -86,7 +86,6 @@ class WeatherServiceTest {
         assertEquals(65.0, first.cloudiness());
         assertEquals(3.0, first.dewpointTemperature());
         assertEquals(7.5, first.temperatureC());
-        assertNull(first.precipitationUnit());
         assertNull(first.precipitationMm());
         assertNull(first.precipitationProbability());
         assertNull(first.weatherSymbol());
@@ -101,7 +100,6 @@ class WeatherServiceTest {
         assertEquals(1.2, response.hourlyForecasts().get(1).precipitationMm());
         assertEquals(0.5, response.hourlyForecasts().get(1).precipitationMinMm());
         assertEquals(2.0, response.hourlyForecasts().get(1).precipitationMaxMm());
-        assertEquals("mm", response.hourlyForecasts().get(1).precipitationUnit());
         assertEquals(44.5, response.hourlyForecasts().get(1).precipitationProbability());
         assertEquals("rain", response.hourlyForecasts().get(1).weatherSymbol());
         assertEquals(0.0, response.hourlyForecasts().get(1).uvIndex());
