@@ -135,7 +135,8 @@ class WeatherAiServiceTest {
     }
 
     private HourlyForecast forecast(Instant timestamp, double temperature) {
-        return new HourlyForecast(timestamp, 60.0, 4.0, temperature, 0.2, "cloudy",
+        return new HourlyForecast(timestamp, 60.0, 4.0, temperature, 
+            0.2, null, null, "cloudy",
             3.0, "NW", 75.0, 1012.0, 1.0, 20.0);
     }
 

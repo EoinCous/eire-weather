@@ -8,6 +8,8 @@ public record HourlyForecast(
         Double dewpointTemperature,
         Double temperatureC,
         Double precipitationMm,
+        Double precipitationMinMm,
+        Double precipitationMaxMm,
         String weatherSymbol,
         Double windSpeedMps,
         String windDirection,

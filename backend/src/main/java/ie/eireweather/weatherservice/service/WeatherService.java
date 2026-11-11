@@ -107,7 +107,11 @@ public class WeatherService {
                 if (loc.humidity() != null) builder.humidityPercent = loc.humidity().value();
                 if (loc.pressure() != null) builder.pressureHpa = loc.pressure().value();
             } else {
-                if (loc.precipitation() != null) builder.precipitationMm = loc.precipitation().value();
+                if (loc.precipitation() != null) {
+                    builder.precipitationMm = loc.precipitation().value();
+                    builder.precipitationMinMm = loc.precipitation().minValue();
+                    builder.precipitationMaxMm = loc.precipitation().maxValue();
+                }
                 if (loc.symbol() != null) builder.weatherSymbol = loc.symbol().id();
             }
         }
@@ -131,6 +135,8 @@ public class WeatherService {
         private Double dewpointTemperature;
         private Double temperature;
         private Double precipitationMm;
+        private Double precipitationMinMm;
+        private Double precipitationMaxMm;
         private String weatherSymbol;
         private Double windSpeedMps;
         private String windDirection;
@@ -143,8 +149,9 @@ public class WeatherService {
 
         HourlyForecast build(Double uvIndex, Double airQuality) {
             return new HourlyForecast(
-                timestamp, cloudiness, dewpointTemperature, temperature, precipitationMm, weatherSymbol,
-                windSpeedMps, windDirection, humidityPercent, pressureHpa, uvIndex, airQuality
+                timestamp, cloudiness, dewpointTemperature, temperature, precipitationMm,
+                precipitationMinMm, precipitationMaxMm, weatherSymbol, windSpeedMps, windDirection,
+                humidityPercent, pressureHpa, uvIndex, airQuality
             );
         }
     }

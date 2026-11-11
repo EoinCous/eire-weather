@@ -39,9 +39,13 @@ public record MetEireannResponseDto(
     public record Percentage(@JacksonXmlProperty(isAttribute = true) Double percent) {}
     public record WindDirection(@JacksonXmlProperty(isAttribute = true) String name) {}
     public record WindSpeed(@JacksonXmlProperty(isAttribute = true) Double mps) {}
-    public record Precipitation(@JacksonXmlProperty(isAttribute = true) Double value) {}
+    public record Precipitation(
+        @JacksonXmlProperty(isAttribute = true) Double value,
+        @JacksonXmlProperty(isAttribute = true) Double minValue,
+        @JacksonXmlProperty(isAttribute = true) Double maxValue
+        ) {}
     public record Symbol(
-            @JacksonXmlProperty(isAttribute = true) String id,
-            @JacksonXmlProperty(isAttribute = true) Integer number
+        @JacksonXmlProperty(isAttribute = true) String id,
+        @JacksonXmlProperty(isAttribute = true) Integer number
     ) {}
 }
