@@ -26,17 +26,18 @@ describe('CurrentConditions precipitation', () => {
     );
 
     expect(screen.getByText('0.1 mm')).toBeTruthy();
-    expect(screen.getByText('This hour · range 0.0–3.6 mm · 45% chance')).toBeTruthy();
+    expect(screen.getByText('45%')).toBeTruthy();
+    expect(screen.getByText('Chance')).toBeTruthy();
+    expect(screen.getByText('Range 0.0–3.6 mm')).toBeTruthy();
   });
 
   it('keeps the hourly detail useful when optional precipitation attributes are missing', () => {
     render(<CurrentConditions current={{ precipitationMm: 0 }} />);
 
     expect(screen.getByText('None')).toBeTruthy();
-    expect(screen.getByText('This hour')).toBeTruthy();
   });
 
-  it('hides range and probability when there is no measurable rain', () => {
+  it('keeps rain probability visible when there is no measurable rainfall', () => {
     render(
       <CurrentConditions
         current={{
@@ -49,7 +50,7 @@ describe('CurrentConditions precipitation', () => {
     );
 
     expect(screen.getByText('None')).toBeTruthy();
-    expect(screen.getByText('This hour')).toBeTruthy();
-    expect(screen.queryByText(/range|chance/)).toBeNull();
+    expect(screen.getByText('45%')).toBeTruthy();
+    expect(screen.queryByText(/range/)).toBeNull();
   });
 });

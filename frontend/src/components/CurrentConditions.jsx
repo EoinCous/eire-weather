@@ -94,14 +94,36 @@ function getFogRisk(temperature, dewPoint) {
 
 /* ---------- small presentational pieces ---------- */
 
-function PrimaryStat({ icon: Icon, iconClass, label, value, detail }) {
+function PrimaryStat({
+  icon: Icon,
+  iconClass,
+  label,
+  value,
+  valueLabel,
+  secondaryLabel,
+  secondaryValue,
+  detail,
+}) {
   return (
     <div className="rounded-2xl border border-slate-800/60 bg-slate-950/40 p-4">
       <div className="flex items-center gap-2 text-slate-400">
         <Icon className={`h-4 w-4 ${iconClass}`} />
         <span className="text-xs font-medium">{label}</span>
       </div>
-      <p className="mt-2 text-2xl font-semibold text-white tabular-nums">{value}</p>
+      {secondaryLabel ? (
+        <dl className="mt-2 grid grid-cols-2 gap-2">
+          <div>
+            <dt className="text-[11px] text-slate-400">{valueLabel}</dt>
+            <dd className="mt-0.5 text-xl font-semibold text-white tabular-nums md:text-2xl">{value}</dd>
+          </div>
+          <div>
+            <dt className="text-[11px] text-slate-400">{secondaryLabel}</dt>
+            <dd className="mt-0.5 text-xl font-semibold text-white tabular-nums md:text-2xl">{secondaryValue}</dd>
+          </div>
+        </dl>
+      ) : (
+        <p className="mt-2 text-2xl font-semibold text-white tabular-nums">{value}</p>
+      )}
       {detail && <p className="mt-0.5 text-xs text-slate-400">{detail}</p>}
     </div>
   );
@@ -172,17 +194,14 @@ export default function CurrentConditions({ current }) {
     current.weatherDescription ||
     (current.weatherSymbol ? humanise(current.weatherSymbol) : 'Current conditions');
 
-  const rainfallDetails = ['This hour'];
-  if (rainfall == null || rainfall >= 0.1 || rainfallProbability > 0) {
+  const rainfallDetails = [];
+  if (rainfall == null || rainfall >= 0.1) {
     if (rainfallMin != null && rainfallMax != null) {
-      rainfallDetails.push(`range ${formatValue(rainfallMin, '', 1)}–${formatValue(rainfallMax, ' mm', 1)}`);
+      rainfallDetails.push(`Range ${formatValue(rainfallMin, '', 1)}–${formatValue(rainfallMax, ' mm', 1)}`);
     } else if (rainfallMin != null) {
       rainfallDetails.push(`from ${formatValue(rainfallMin, ' mm', 1)}`);
     } else if (rainfallMax != null) {
       rainfallDetails.push(`up to ${formatValue(rainfallMax, ' mm', 1)}`);
-    }
-    if (rainfallProbability != null) {
-      rainfallDetails.push(`${formatValue(rainfallProbability, '%')} chance`);
     }
   }
 
@@ -263,6 +282,9 @@ export default function CurrentConditions({ current }) {
           iconClass="text-cyan-400"
           label="Rain"
           value={rainfall == null ? '—' : rainfall >= 0.1 ? `${formatValue(rainfall, ' mm', 1)}` : 'None'}
+          valueLabel="Amount"
+          secondaryLabel="Chance"
+          secondaryValue={formatValue(rainfallProbability, '%')}
           detail={rainfallDetails.join(' · ')}
         />
       </div>
