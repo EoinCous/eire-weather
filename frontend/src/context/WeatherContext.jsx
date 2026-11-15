@@ -8,7 +8,7 @@ import {
 
 const WeatherContext = createContext(null);
 
-const BASE_URL = `http://${import.meta.env.VITE_API_BASE_URL}:8080/api/v1/weather`;
+const BASE_URL = import.meta.env.VITE_API_BASE_URL || "";
 
 const SAVED_LOCATION_KEY = 'eireweather-location';
 
